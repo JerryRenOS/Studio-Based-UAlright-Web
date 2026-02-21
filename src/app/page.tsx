@@ -19,6 +19,9 @@ export default function Home() {
 
   const handleSignIn = async () => {
     const provider = new GoogleAuthProvider();
+    // Ensure we always prompt for account selection to avoid session issues
+    provider.setCustomParameters({ prompt: 'select_account' });
+    
     try {
       await signInWithPopup(auth, provider);
       toast({
