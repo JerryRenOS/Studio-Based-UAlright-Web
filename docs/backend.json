@@ -1,0 +1,70 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User account information and safety settings.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "safetySettings": {
+          "type": "object",
+          "properties": {
+            "smsTemplate": { "type": "string" }
+          }
+        }
+      },
+      "required": ["name", "phone"]
+    },
+    "TrustedContact": {
+      "title": "Trusted Contact",
+      "description": "Contacts to be notified during an incident.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "priority": { "type": "number" }
+      },
+      "required": ["userId", "name", "phone"]
+    },
+    "Incident": {
+      "title": "Incident",
+      "description": "A safety incident triggered by the user.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["loud", "silent", "staged"] },
+        "status": { "type": "string", "enum": ["active", "resolved"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        }
+      },
+      "required": ["userId", "type", "status"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "phone"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile data."
+    },
+    "/users/{userId}/contacts/{contactId}": {
+      "schema": "TrustedContact",
+      "description": "User's trusted contacts."
+    },
+    "/incidents/{incidentId}": {
+      "schema": "Incident",
+      "description": "Global incident records."
+    }
+  }
+}
