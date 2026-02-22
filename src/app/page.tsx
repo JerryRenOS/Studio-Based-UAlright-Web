@@ -64,17 +64,24 @@ export default function Home() {
 
     if (!firestore) return;
 
+    // Align with backend.json and security rules:
+    // Path: /users/{userId}/incidents/{incidentId}
+    // Field: userProfileId must match path userId
     const incidentData = {
-      userId: user.uid,
-      type,
+      userProfileId: user.uid,
+      incidentType: type === 'loud' ? 'LoudAlarm' : 'SilentAlarm',
       status: 'active',
+      triggerTime: new Date().toISOString(), // Required by schema
+      currentLocationLatitude: 0, // Placeholder as per schema requirements
+      currentLocationLongitude: 0,
+      currentLocationTimestamp: new Date().toISOString(),
       createdAt: serverTimestamp(),
     };
 
-    const incidentsRef = collection(firestore, 'incidents');
+    const incidentsRef = collection(firestore, 'users', user.uid, 'incidents');
 
     addDoc(incidentsRef, incidentData)
-      .then(() => {
+      .then((docRef) => {
         toast({
           title: `${type.charAt(0).toUpperCase() + type.slice(1)} Alarm Triggered`,
           description: type === 'loud' 
@@ -85,7 +92,7 @@ export default function Home() {
       })
       .catch(async (error) => {
         const permissionError = new FirestorePermissionError({
-          path: 'incidents',
+          path: `users/${user.uid}/incidents`,
           operation: 'create',
           requestResourceData: incidentData,
         });
