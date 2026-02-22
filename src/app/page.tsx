@@ -100,9 +100,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen pb-24 md:pl-20 md:pb-0 font-body bg-background">
-      <div className="p-6 max-w-2xl mx-auto space-y-12">
-        <header className="flex justify-between items-center pt-8">
-          <div>
+      <div className="p-6 max-w-2xl mx-auto space-y-12 flex flex-col items-center">
+        <header className="w-full flex justify-between items-center pt-8">
+          <div className="text-left">
             <h1 className="text-4xl font-headline font-bold text-primary tracking-tight">UAlright?</h1>
             <p className="text-muted-foreground mt-1">Stay safe, stay connected.</p>
           </div>
@@ -118,39 +118,39 @@ export default function Home() {
           </div>
         </header>
 
-        <div className="space-y-6 flex flex-col items-center">
-          <Card className="w-full max-w-md border-none shadow-xl rounded-[2rem] overflow-hidden group hover:scale-[1.02] transition-all">
+        <div className="w-full space-y-8 flex flex-col items-center max-w-md">
+          <Card className="w-full border-none shadow-xl rounded-[2.5rem] overflow-hidden group hover:scale-[1.02] transition-all bg-white">
             <CardContent className="p-0">
               <Button 
                 variant="ghost" 
-                className="w-full h-48 flex flex-col gap-3 hover:bg-destructive/5"
+                className="w-full h-56 flex flex-col gap-4 hover:bg-destructive/5"
                 onClick={() => triggerAlarm('loud')}
                 disabled={isUserLoading}
               >
-                <div className="bg-destructive/10 p-3 rounded-full text-destructive">
-                  <Volume2 size={32} />
+                <div className="bg-destructive/10 p-4 rounded-full text-destructive">
+                  <Volume2 size={36} />
                 </div>
                 <div className="text-center">
-                  <span className="text-2xl font-bold block text-destructive">Loud Alarm</span>
+                  <span className="text-3xl font-bold block text-destructive">Loud Alarm</span>
                   <span className="text-sm font-normal text-destructive/60">Immediate deterrence</span>
                 </div>
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="w-full max-w-md border-none shadow-xl rounded-[2rem] overflow-hidden group hover:scale-[1.02] transition-all">
+          <Card className="w-full border-none shadow-xl rounded-[2.5rem] overflow-hidden group hover:scale-[1.02] transition-all bg-white">
             <CardContent className="p-0">
               <Button 
                 variant="ghost" 
-                className="w-full h-48 flex flex-col gap-3 hover:bg-primary/5"
+                className="w-full h-56 flex flex-col gap-4 hover:bg-primary/5"
                 onClick={() => triggerAlarm('silent')}
                 disabled={isUserLoading}
               >
-                <div className="bg-muted p-3 rounded-full text-muted-foreground">
-                  <EyeOff size={32} />
+                <div className="bg-muted p-4 rounded-full text-muted-foreground">
+                  <EyeOff size={36} />
                 </div>
                 <div className="text-center">
-                  <span className="text-2xl font-bold block text-primary">Silent Alarm</span>
+                  <span className="text-3xl font-bold block text-primary">Silent Alarm</span>
                   <span className="text-sm font-normal text-muted-foreground">Discreet escalation</span>
                 </div>
               </Button>
@@ -158,7 +158,7 @@ export default function Home() {
           </Card>
         </div>
 
-        <section className="space-y-4 pt-4">
+        <section className="w-full space-y-4 max-w-md pt-4">
           <h2 className="text-xl font-bold text-primary px-2">Safety Status</h2>
           <Card className="border-none shadow-lg bg-white/70 backdrop-blur-md rounded-2xl">
             <CardContent className="p-6 flex items-center gap-4">
@@ -184,9 +184,9 @@ export default function Home() {
         </section>
 
         {!user && !isUserLoading && (
-          <div className="flex flex-col items-center pt-8">
-            <Button className="w-full max-w-sm rounded-full py-6 flex gap-2 font-bold shadow-lg" onClick={handleSignIn}>
-              <LogIn size={20} />
+          <div className="flex flex-col items-center w-full max-w-md pt-8">
+            <Button className="w-full rounded-full py-7 flex gap-3 text-lg font-bold shadow-lg" onClick={handleSignIn}>
+              <LogIn size={24} />
               Sign In with Google
             </Button>
             <p className="text-xs text-muted-foreground mt-4">Secure Access Required</p>
