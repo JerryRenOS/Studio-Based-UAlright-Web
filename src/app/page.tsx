@@ -64,15 +64,12 @@ export default function Home() {
 
     if (!firestore) return;
 
-    // Align with backend.json and security rules:
-    // Path: /users/{userId}/incidents/{incidentId}
-    // Field: userProfileId must match path userId
     const incidentData = {
       userProfileId: user.uid,
       incidentType: type === 'loud' ? 'LoudAlarm' : 'SilentAlarm',
       status: 'active',
-      triggerTime: new Date().toISOString(), // Required by schema
-      currentLocationLatitude: 0, // Placeholder as per schema requirements
+      triggerTime: new Date().toISOString(),
+      currentLocationLatitude: 0,
       currentLocationLongitude: 0,
       currentLocationTimestamp: new Date().toISOString(),
       createdAt: serverTimestamp(),
@@ -81,7 +78,7 @@ export default function Home() {
     const incidentsRef = collection(firestore, 'users', user.uid, 'incidents');
 
     addDoc(incidentsRef, incidentData)
-      .then((docRef) => {
+      .then(() => {
         toast({
           title: `${type.charAt(0).toUpperCase() + type.slice(1)} Alarm Triggered`,
           description: type === 'loud' 
@@ -90,7 +87,7 @@ export default function Home() {
           variant: type === 'loud' ? "destructive" : "default",
         });
       })
-      .catch(async (error) => {
+      .catch(async () => {
         const permissionError = new FirestorePermissionError({
           path: `users/${user.uid}/incidents`,
           operation: 'create',
@@ -102,11 +99,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen pb-24 md:pl-20 md:pb-0 font-body bg-background">
-      <div className="p-6 max-w-lg mx-auto space-y-8">
-        <header className="flex justify-between items-center pt-4">
+      <div className="p-6 max-w-2xl mx-auto space-y-12">
+        <header className="flex justify-between items-center pt-8">
           <div>
-            <h1 className="text-3xl font-headline font-bold text-primary tracking-tight">UAlright?</h1>
-            <p className="text-muted-foreground">Stay safe, stay connected.</p>
+            <h1 className="text-4xl font-headline font-bold text-primary tracking-tight">UAlright?</h1>
+            <p className="text-muted-foreground mt-1">Stay safe, stay connected.</p>
           </div>
           <div className="flex items-center gap-4">
             {user && (
@@ -114,83 +111,78 @@ export default function Home() {
                 <LogOut size={20} className="text-muted-foreground" />
               </Button>
             )}
-            <div className="bg-accent/20 p-2 rounded-full">
-              <ShieldCheck className="text-primary" size={32} />
+            <div className="bg-primary/10 p-2 rounded-full shadow-sm">
+              <ShieldCheck className="text-primary" size={28} />
             </div>
           </div>
         </header>
 
-        <div className="grid gap-6">
-          <Card className="border-2 border-destructive/20 shadow-lg overflow-hidden group hover:border-destructive transition-all">
+        <div className="space-y-6 flex flex-col items-center">
+          <Card className="w-full max-w-md border-none shadow-xl rounded-[2rem] overflow-hidden group hover:scale-[1.02] transition-all">
             <CardContent className="p-0">
               <Button 
                 variant="ghost" 
-                className="w-full h-40 flex flex-col gap-4 text-destructive hover:bg-destructive/5"
+                className="w-full h-48 flex flex-col gap-3 hover:bg-destructive/5"
                 onClick={() => triggerAlarm('loud')}
                 disabled={loading}
               >
-                <div className="bg-destructive/10 p-4 rounded-full group-hover:scale-110 transition-transform">
-                  <Volume2 size={48} />
+                <div className="bg-destructive/10 p-3 rounded-full text-destructive">
+                  <Volume2 size={32} />
                 </div>
                 <div className="text-center">
-                  <span className="text-xl font-bold block">Loud Alarm</span>
-                  <span className="text-sm font-normal opacity-70">Immediate deterrence</span>
+                  <span className="text-2xl font-bold block text-destructive">Loud Alarm</span>
+                  <span className="text-sm font-normal text-destructive/60">Immediate deterrence</span>
                 </div>
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="border-2 border-primary/20 shadow-lg overflow-hidden group hover:border-primary transition-all">
+          <Card className="w-full max-w-md border-none shadow-xl rounded-[2rem] overflow-hidden group hover:scale-[1.02] transition-all">
             <CardContent className="p-0">
               <Button 
                 variant="ghost" 
-                className="w-full h-40 flex flex-col gap-4 text-primary hover:bg-primary/5"
+                className="w-full h-48 flex flex-col gap-3 hover:bg-primary/5"
                 onClick={() => triggerAlarm('silent')}
                 disabled={loading}
               >
-                <div className="bg-primary/10 p-4 rounded-full group-hover:scale-110 transition-transform">
-                  <EyeOff size={48} />
+                <div className="bg-muted p-3 rounded-full text-muted-foreground">
+                  <EyeOff size={32} />
                 </div>
                 <div className="text-center">
-                  <span className="text-xl font-bold block">Silent Alarm</span>
-                  <span className="text-sm font-normal opacity-70">Discreet escalation</span>
+                  <span className="text-2xl font-bold block text-primary">Silent Alarm</span>
+                  <span className="text-sm font-normal text-muted-foreground">Discreet escalation</span>
                 </div>
               </Button>
             </CardContent>
           </Card>
         </div>
 
-        {!user && !loading && (
-          <Card className="bg-muted/50 border-dashed">
-            <CardContent className="p-6 text-center space-y-4">
-              <div className="space-y-1">
-                <p className="text-sm font-bold">Secure Access Required</p>
-                <p className="text-xs text-muted-foreground">Sign in to activate incident reporting and trusted contact alerts.</p>
-              </div>
-              <Button className="w-full flex gap-2" onClick={handleSignIn}>
-                <LogIn size={18} />
-                Sign In with Google
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        <section className="space-y-4">
-          <h2 className="text-lg font-bold text-primary px-1">Safety Status</h2>
-          <Card className="bg-white/50 backdrop-blur">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className={`w-3 h-3 rounded-full ${user ? 'bg-green-500 animate-pulse' : 'bg-amber-400'}`} />
+        <section className="space-y-4 pt-4">
+          <h2 className="text-xl font-bold text-primary px-2">Safety Status</h2>
+          <Card className="border-none shadow-lg bg-white/70 backdrop-blur-md rounded-2xl">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className={`w-3 h-3 rounded-full ${user ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-amber-400'}`} />
               <div className="flex-1">
-                <p className="text-sm font-medium">
+                <p className="text-base font-bold">
                   {user ? 'Monitoring active' : 'Awaiting sign-in'}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   {user ? 'Location sharing ready for silent alarm.' : 'Sign in to enable location sharing services.'}
                 </p>
               </div>
             </CardContent>
           </Card>
         </section>
+
+        {!user && !loading && (
+          <div className="flex flex-col items-center pt-8">
+            <Button className="w-full max-w-sm rounded-full py-6 flex gap-2 font-bold shadow-lg" onClick={handleSignIn}>
+              <LogIn size={20} />
+              Sign In with Google
+            </Button>
+            <p className="text-xs text-muted-foreground mt-4">Secure Access Required</p>
+          </div>
+        )}
       </div>
       <Navigation />
     </div>
