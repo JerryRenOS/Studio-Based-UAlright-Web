@@ -15,7 +15,9 @@ import {
   AlertCircle, 
   ChevronDown, 
   ChevronUp,
-  History
+  History,
+  Volume2,
+  EyeOff
 } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, limit } from 'firebase/firestore';
@@ -32,7 +34,7 @@ export default function DashboardPage() {
     return query(
       collection(firestore, 'users', user.uid, 'incidents'),
       orderBy('triggerTime', 'desc'),
-      limit(25) // Fetch more for history view
+      limit(25)
     );
   }, [firestore, user]);
 
@@ -77,15 +79,30 @@ export default function DashboardPage() {
                   <Loader2 className="animate-spin text-primary" />
                 </div>
               ) : activeIncident ? (
-                <Card className="border-destructive shadow-lg overflow-hidden relative ring-2 ring-destructive/20 animate-pulse">
+                <Card className={cn(
+                  "overflow-hidden relative shadow-lg ring-2 transition-all",
+                  activeIncident.incidentType === 'LoudAlarm' 
+                    ? "border-destructive ring-destructive/20 bg-destructive/5" 
+                    : "border-primary ring-primary/20 bg-primary/5"
+                )}>
                   <div className="absolute top-0 right-0 p-3">
                     <span className="flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
+                      <span className={cn(
+                        "animate-ping absolute inline-flex h-full w-full rounded-full opacity-75",
+                        activeIncident.incidentType === 'LoudAlarm' ? "bg-destructive" : "bg-primary"
+                      )}></span>
+                      <span className={cn(
+                        "relative inline-flex rounded-full h-3 w-3",
+                        activeIncident.incidentType === 'LoudAlarm' ? "bg-destructive" : "bg-primary"
+                      )}></span>
                     </span>
                   </div>
-                  <CardHeader className="bg-destructive/5 border-b border-destructive/10 py-4">
-                    <CardTitle className="text-destructive flex items-center gap-2 text-xl font-bold">
+                  <CardHeader className="py-4 border-b border-black/5">
+                    <CardTitle className={cn(
+                      "flex items-center gap-2 text-xl font-bold",
+                      activeIncident.incidentType === 'LoudAlarm' ? "text-destructive" : "text-primary"
+                    )}>
+                      {activeIncident.incidentType === 'LoudAlarm' ? <Volume2 size={24} /> : <EyeOff size={24} />}
                       {activeIncident.incidentType === 'LoudAlarm' ? 'Loud Alarm Active' : 'Silent Alarm Active'}
                     </CardTitle>
                   </CardHeader>
@@ -94,7 +111,9 @@ export default function DashboardPage() {
                       <span className="text-muted-foreground font-medium">
                         Started: {format(new Date(activeIncident.triggerTime), 'p')}
                       </span>
-                      <Badge variant="destructive" className="animate-pulse">Active Now</Badge>
+                      <Badge variant={activeIncident.incidentType === 'LoudAlarm' ? "destructive" : "default"} className="animate-pulse">
+                        Live Incident
+                      </Badge>
                     </div>
                     
                     <div className="space-y-4">
@@ -169,11 +188,10 @@ export default function DashboardPage() {
                       (isHistoryExpanded ? allIncidents : allIncidents.slice(0, 3)).map((incident) => (
                         <HistoryItem 
                           key={incident.id}
-                          type={incident.incidentType === 'LoudAlarm' ? 'Loud Alarm' : incident.incidentType === 'SilentAlarm' ? 'Silent Alarm' : 'Staged Call'} 
+                          type={incident.incidentType} 
                           date={format(new Date(incident.triggerTime), 'MMM d, p')} 
                           status={incident.status} 
                           isActive={incident.status === 'active'}
-                          desc={incident.incidentType === 'LoudAlarm' ? 'Deterrence protocol used.' : 'Discreet alert triggered.'}
                         />
                       ))
                     ) : !isIncidentsLoading && (
@@ -194,30 +212,43 @@ export default function DashboardPage() {
   );
 }
 
-function HistoryItem({ type, date, status, isActive, desc }: { type: string, date: string, status: string, isActive: boolean, desc: string }) {
+function HistoryItem({ type, date, status, isActive }: { type: string, date: string, status: string, isActive: boolean }) {
+  const isLoud = type === 'LoudAlarm';
+  const label = isLoud ? 'Loud Alarm' : type === 'SilentAlarm' ? 'Silent Alarm' : 'Staged Call';
+  const desc = isLoud ? 'Deterrence protocol used.' : 'Discreet alert triggered.';
+  
   return (
     <Card className={cn(
-      "hover:bg-muted/10 transition-all border-none shadow-none bg-muted/5",
-      isActive && "bg-destructive/5 ring-1 ring-destructive/10"
+      "hover:bg-muted/10 transition-all border-none shadow-none",
+      isLoud ? "bg-destructive/5" : "bg-primary/5",
+      isActive && (isLoud ? "ring-2 ring-destructive/20" : "ring-2 ring-primary/20")
     )}>
       <CardContent className="p-4 flex justify-between items-center">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <h3 className="font-bold text-sm">{type}</h3>
-            <Badge 
-              variant={isActive ? "destructive" : "secondary"} 
-              className="text-[9px] h-4 px-1.5 font-bold uppercase tracking-wider"
-            >
-              {status}
-            </Badge>
+        <div className="flex gap-4 items-center">
+          <div className={cn(
+            "p-2 rounded-full",
+            isLoud ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
+          )}>
+            {isLoud ? <Volume2 size={16} /> : <EyeOff size={16} />}
           </div>
-          <p className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
-            <Clock size={10} /> {date}
-          </p>
-          <p className="text-xs text-foreground/80">{desc}</p>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-sm">{label}</h3>
+              <Badge 
+                variant={isActive ? (isLoud ? "destructive" : "default") : "secondary"} 
+                className="text-[9px] h-4 px-1.5 font-bold uppercase tracking-wider"
+              >
+                {status}
+              </Badge>
+            </div>
+            <p className="text-[11px] text-muted-foreground font-medium flex items-center gap-1">
+              <Clock size={10} /> {date}
+            </p>
+            <p className="text-xs text-foreground/80">{desc}</p>
+          </div>
         </div>
         <div className="opacity-20">
-          {isActive ? <AlertCircle size={18} className="text-destructive" /> : <Clock size={18} className="text-muted-foreground" />}
+          {isActive ? <AlertCircle size={18} className={isLoud ? "text-destructive" : "text-primary"} /> : <CheckCircle2 size={18} className="text-muted-foreground" />}
         </div>
       </CardContent>
     </Card>

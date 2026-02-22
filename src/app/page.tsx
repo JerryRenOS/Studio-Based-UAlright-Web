@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Navigation } from '@/components/Navigation';
@@ -119,7 +118,7 @@ export default function Home() {
         </header>
 
         <div className="w-full space-y-8 flex flex-col items-center max-w-md">
-          <Card className="w-full border-none shadow-xl rounded-[2.5rem] overflow-hidden group hover:scale-[1.02] transition-all bg-white">
+          <Card className="w-full border-none shadow-xl rounded-[2.5rem] overflow-hidden group hover:scale-[1.02] transition-all bg-white ring-1 ring-destructive/5">
             <CardContent className="p-0">
               <Button 
                 variant="ghost" 
@@ -127,18 +126,18 @@ export default function Home() {
                 onClick={() => triggerAlarm('loud')}
                 disabled={isUserLoading}
               >
-                <div className="bg-destructive/10 p-4 rounded-full text-destructive">
+                <div className="bg-destructive/10 p-4 rounded-full text-destructive group-hover:bg-destructive/20 transition-colors">
                   <Volume2 size={36} />
                 </div>
                 <div className="text-center">
                   <span className="text-3xl font-bold block text-destructive">Loud Alarm</span>
-                  <span className="text-sm font-normal text-destructive/60">Immediate deterrence</span>
+                  <span className="text-sm font-normal text-destructive/60 font-medium">Immediate deterrence</span>
                 </div>
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="w-full border-none shadow-xl rounded-[2.5rem] overflow-hidden group hover:scale-[1.02] transition-all bg-white">
+          <Card className="w-full border-none shadow-xl rounded-[2.5rem] overflow-hidden group hover:scale-[1.02] transition-all bg-white ring-1 ring-primary/5">
             <CardContent className="p-0">
               <Button 
                 variant="ghost" 
@@ -146,12 +145,12 @@ export default function Home() {
                 onClick={() => triggerAlarm('silent')}
                 disabled={isUserLoading}
               >
-                <div className="bg-muted p-4 rounded-full text-muted-foreground">
+                <div className="bg-primary/10 p-4 rounded-full text-primary group-hover:bg-primary/20 transition-colors">
                   <EyeOff size={36} />
                 </div>
                 <div className="text-center">
-                  <span className="text-3xl font-bold block text-primary">Silent Alarm</span>
-                  <span className="text-sm font-normal text-muted-foreground">Discreet escalation</span>
+                  <span className="text-3xl font-bold block text-primary font-headline">Silent Alarm</span>
+                  <span className="text-sm font-normal text-primary/60 font-medium tracking-tight">Discreet escalation</span>
                 </div>
               </Button>
             </CardContent>
