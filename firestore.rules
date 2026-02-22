@@ -1,18 +1,200 @@
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    /**
+     * UAlright Security Rules Philosophy:
+     *
+     * Core Philosophy: This ruleset implements a strict path-based ownership model. The security 
+     * posture is designed for a safety-critical application where user isolation is paramount. 
+     * Every piece of user-generated data is sequestered within the /users/{userId} hierarchy.
+     *
+     * Data Structure: All application data (Profiles, Trusted Contacts, Safety Settings, Assets, 
+     * Scenarios, Incidents, Actions, and Device Tokens) is organized under the user's specific 
+     * document. This ensures that a user's UID acts as the primary access key for their entire 
+     * safety ecosystem.
+     *
+     * Key Security Decisions:
+     * 1. Authorization Independence: We use the {userId} path variable to determine access. 
+     *    This eliminates the need for cross-document 'get()' lookups, making rules fast and robust.
+     * 2. Strict Ownership: No user can read or write any data belonging to another user.
+     * 3. Relational Integrity: On creation and update, we verify that internal fields (like 
+     *    userProfileId) match the owner's UID to prevent data from being cross-linked.
+     * 4. Structural Segregation: System-level audit logs are separated from user-specific logs 
+     *    to ensure that administrative data is never exposed to standard users.
+     * 5. Prototyping Flexibility: While authorization is strictly enforced based on UIDs, 
+     *    data schema validation is omitted to allow for rapid iterative development.
+     */
+
+    // --- Global Helper Functions ---
+
+    /** Checks if the request is coming from an authenticated user. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** Validates that the path-provided userId matches the authenticated user's UID. */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** Combines ownership check with verification that the document exists for updates/deletes. */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    /** Verifies a relational field is immutable and matches the owner during creation. */
+    function matchesPath(fieldValue, userId) {
+      return fieldValue == userId;
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for the primary UserProfile document. Controls account registration and profile management.
+     * @path /users/{userId}
+     * @allow User 'abc' to (create) document /users/abc.
+     * @deny User 'abc' to (update) document /users/xyz.
+     * @principle Ownership (Self-Creation).
+     */
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      match /contacts/{contactId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && matchesPath(request.resource.data.id, userId);
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Rules for a user's Trusted Contacts.
+       * @path /users/{userId}/trustedContacts/{contactId}
+       * @allow User 'abc' to (list) their own contacts.
+       * @deny User 'abc' to (get) a contact under /users/xyz.
+       * @principle Path-based Ownership.
+       */
+      match /trustedContacts/{contactId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && matchesPath(request.resource.data.userProfileId, userId);
+        allow update: if isExistingOwner(userId) && request.resource.data.userProfileId == resource.data.userProfileId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Rules for the SafetyProfile singleton, containing emergency preferences and duress codes.
+       * @path /users/{userId}/safetyProfile/safetyProfile
+       * @allow User 'abc' to (update) their own safety settings.
+       * @deny Unauthenticated user to (get) any safety profile.
+       * @principle Path-based Ownership.
+       */
+      match /safetyProfile/{profileId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && matchesPath(request.resource.data.userProfileId, userId);
+        allow update: if isExistingOwner(userId) && request.resource.data.userProfileId == resource.data.userProfileId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Rules for StagedCallAssets (audio/video metadata).
+       * @path /users/{userId}/stagedCallAssets/{assetId}
+       * @allow User 'abc' to (create) metadata for a pre-recorded call.
+       * @deny User 'abc' to (delete) an asset belonging to user 'xyz'.
+       * @principle Path-based Ownership.
+       */
+      match /stagedCallAssets/{assetId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && matchesPath(request.resource.data.userProfileId, userId);
+        allow update: if isExistingOwner(userId) && request.resource.data.userProfileId == resource.data.userProfileId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Rules for StagedCallScenarios (pre-configured fake call logic).
+       * @path /users/{userId}/stagedCallScenarios/{scenarioId}
+       * @allow User 'abc' to (get) their 'Fake Boss Call' scenario.
+       * @deny User 'abc' to (update) scenario IDs in user 'xyz''s folder.
+       * @principle Path-based Ownership.
+       */
+      match /stagedCallScenarios/{scenarioId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && matchesPath(request.resource.data.userProfileId, userId);
+        allow update: if isExistingOwner(userId) && request.resource.data.userProfileId == resource.data.userProfileId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Rules for safety Incidents.
+       * @path /users/{userId}/incidents/{incidentId}
+       * @allow User 'abc' to (create) a 'LoudAlarm' incident.
+       * @deny User 'abc' to (list) incidents for user 'xyz'.
+       * @principle Path-based Ownership.
+       */
+      match /incidents/{incidentId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && matchesPath(request.resource.data.userProfileId, userId);
+        allow update: if isExistingOwner(userId) && request.resource.data.userProfileId == resource.data.userProfileId;
+        allow delete: if isExistingOwner(userId);
+
+        /**
+         * @description Rules for IncidentActions (log of events during an incident).
+         * @path /users/{userId}/incidents/{incidentId}/incidentActions/{actionId}
+         * @allow User 'abc' to (create) a location update action during their incident.
+         * @deny User 'abc' to (get) actions for an incident owned by user 'xyz'.
+         * @principle Authorization Independence (uses denormalized userProfileId).
+         */
+        match /incidentActions/{actionId} {
+          allow get: if isOwner(userId);
+          allow list: if isOwner(userId);
+          allow create: if isOwner(userId) && matchesPath(request.resource.data.userProfileId, userId);
+          allow update: if isExistingOwner(userId) && request.resource.data.userProfileId == resource.data.userProfileId;
+          allow delete: if isExistingOwner(userId);
+        }
+      }
+
+      /**
+       * @description Rules for DeviceTokens (FCM tokens for push notifications).
+       * @path /users/{userId}/deviceTokens/{tokenId}
+       * @allow User 'abc' to (create) a token for their current device.
+       * @deny User 'abc' to (update) tokens in user 'xyz''s collection.
+       * @principle Path-based Ownership.
+       */
+      match /deviceTokens/{tokenId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && matchesPath(request.resource.data.userProfileId, userId);
+        allow update: if isExistingOwner(userId) && request.resource.data.userProfileId == resource.data.userProfileId;
+        allow delete: if isExistingOwner(userId);
+      }
+
+      /**
+       * @description Rules for user-specific AuditLogs.
+       * @path /users/{userId}/auditLogs/{logId}
+       * @allow User 'abc' to (get) a log of their last login.
+       * @deny User 'abc' to (list) audit logs for user 'xyz'.
+       * @principle Structural Segregation.
+       */
+      match /auditLogs/{logId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && matchesPath(request.resource.data.userProfileId, userId);
+        allow update: if false; // Audit logs should generally be immutable.
+        allow delete: if false; // Audit logs should generally be preserved.
       }
     }
-    
-    match /incidents/{incidentId} {
-      allow create: if request.auth != null;
-      allow read, update: if request.auth != null && request.resource.data.userId == request.auth.uid;
+
+    /**
+     * @description Rules for System-wide Audit Logs.
+     * @path /systemAuditLogs/{logId}
+     * @allow No client-side requests (Backend only).
+     * @deny Any user (read/write) access to system logs.
+     * @principle Strict Segregation & Restricted Access.
+     */
+    match /systemAuditLogs/{logId} {
+      allow get, list: if false;
+      allow create, update, delete: if false;
     }
   }
 }

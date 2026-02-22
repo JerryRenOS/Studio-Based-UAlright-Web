@@ -1,70 +1,707 @@
-
 {
   "entities": {
     "UserProfile": {
-      "title": "User Profile",
-      "description": "User account information and safety settings.",
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
       "type": "object",
+      "description": "Represents a user's primary profile information within the UAlright application. It links to their personal settings and incident history.",
       "properties": {
-        "name": { "type": "string" },
-        "phone": { "type": "string" },
-        "email": { "type": "string" },
-        "safetySettings": {
-          "type": "object",
-          "properties": {
-            "smsTemplate": { "type": "string" }
-          }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity. This typically corresponds to the user's ID from the external authentication system."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's preferred name for display within the application."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address, used for communication and identification purposes. Authentication details are managed by an external system.",
+          "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The user's primary phone number, crucial for safety features and contact."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this user profile was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating the last time this user profile was updated.",
+          "format": "date-time"
         }
       },
-      "required": ["name", "phone"]
+      "required": [
+        "id",
+        "displayName",
+        "phoneNumber",
+        "createdAt"
+      ]
     },
     "TrustedContact": {
-      "title": "Trusted Contact",
-      "description": "Contacts to be notified during an incident.",
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "TrustedContact",
       "type": "object",
+      "description": "Stores information for a user's trusted contacts who can be notified during a safety incident.",
       "properties": {
-        "userId": { "type": "string" },
-        "name": { "type": "string" },
-        "phone": { "type": "string" },
-        "priority": { "type": "number" }
-      },
-      "required": ["userId", "name", "phone"]
-    },
-    "Incident": {
-      "title": "Incident",
-      "description": "A safety incident triggered by the user.",
-      "type": "object",
-      "properties": {
-        "userId": { "type": "string" },
-        "type": { "type": "string", "enum": ["loud", "silent", "staged"] },
-        "status": { "type": "string", "enum": ["active", "resolved"] },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "location": {
-          "type": "object",
-          "properties": {
-            "lat": { "type": "number" },
-            "lng": { "type": "number" }
-          }
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the TrustedContact entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to the UserProfile that owns this trusted contact. (Relationship: UserProfile 1:N TrustedContact)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The full name of the trusted contact."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The phone number of the trusted contact, used for sending SMS alerts."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the trusted contact (optional).",
+          "format": "email"
+        },
+        "relationship": {
+          "type": "string",
+          "description": "Describes the user's relationship to the contact (e.g., 'Family', 'Friend', 'Coworker')."
+        },
+        "order": {
+          "type": "number",
+          "description": "An optional numerical value to specify the order or priority of contacting this trusted contact."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "A flag indicating whether this trusted contact is currently active and eligible for notifications."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this trusted contact record was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating the last time this trusted contact record was updated.",
+          "format": "date-time"
         }
       },
-      "required": ["userId", "type", "status"]
+      "required": [
+        "id",
+        "userProfileId",
+        "name",
+        "phoneNumber",
+        "isActive",
+        "createdAt"
+      ]
+    },
+    "SafetyProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SafetyProfile",
+      "type": "object",
+      "description": "Contains a user's personalized safety settings, including emergency contact preferences, escalation logic, and duress passcode metadata.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the SafetyProfile entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to the UserProfile this safety profile belongs to. (Relationship: UserProfile 1:1 SafetyProfile)"
+        },
+        "defaultSmsTemplate": {
+          "type": "string",
+          "description": "The default message template text used for SMS alerts sent to trusted contacts during an incident."
+        },
+        "escalationStrategy": {
+          "type": "string",
+          "description": "A JSON string representing the strategy for notifying trusted contacts (e.g., 'all at once', 'sequential', 'specific groups')."
+        },
+        "duressPasscodeHash": {
+          "type": "string",
+          "description": "A cryptographic hash of the user's duress passcode. The raw passcode is never stored."
+        },
+        "duressPasscodeSalt": {
+          "type": "string",
+          "description": "The salt used in conjunction with the duressPasscodeHash for security."
+        },
+        "locationUpdateIntervalSeconds": {
+          "type": "number",
+          "description": "The interval in seconds at which location updates should be sent to trusted contacts during a silent alarm."
+        },
+        "locationUpdateDurationMinutes": {
+          "type": "number",
+          "description": "The total duration in minutes for which location updates should continue during a silent alarm."
+        },
+        "trustedContactIds": {
+          "type": "array",
+          "description": "An array of IDs referencing TrustedContact entities specifically activated for this safety profile. (Relationship: SafetyProfile N:N TrustedContact via curated list)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this safety profile was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating the last time this safety profile was updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "defaultSmsTemplate",
+        "escalationStrategy",
+        "duressPasscodeHash",
+        "duressPasscodeSalt",
+        "locationUpdateIntervalSeconds",
+        "locationUpdateDurationMinutes",
+        "trustedContactIds",
+        "createdAt"
+      ]
+    },
+    "StagedCallAsset": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StagedCallAsset",
+      "type": "object",
+      "description": "Stores metadata and references to audio/video assets used by a user for their staged call scenarios.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StagedCallAsset entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to the UserProfile that owns this staged call asset. (Relationship: UserProfile 1:N StagedCallAsset)"
+        },
+        "name": {
+          "type": "string",
+          "description": "A user-defined name for the staged call asset (e.g., 'Pre-recorded Boss Call')."
+        },
+        "assetType": {
+          "type": "string",
+          "description": "The type of media asset, such as 'audio' or 'video'."
+        },
+        "storagePath": {
+          "type": "string",
+          "description": "The path or URI to the actual asset file stored in cloud storage (e.g., Firebase Storage)."
+        },
+        "durationSeconds": {
+          "type": "number",
+          "description": "The duration of the audio or video asset in seconds."
+        },
+        "transcriptCues": {
+          "type": "string",
+          "description": "A JSON string array of objects, each containing 'timeOffsetSeconds' (number) and 'cueText' (string) for timed script prompts during the staged call."
+        },
+        "version": {
+          "type": "number",
+          "description": "An optional version number for the asset metadata or file, useful for updates."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this staged call asset was uploaded or created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating the last time this staged call asset's metadata was updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "name",
+        "assetType",
+        "storagePath",
+        "durationSeconds",
+        "createdAt"
+      ]
+    },
+    "StagedCallScenario": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StagedCallScenario",
+      "type": "object",
+      "description": "Defines a pre-configured staged call scenario, including associated assets and call parameters, for a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the StagedCallScenario entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to the UserProfile that owns this staged call scenario. (Relationship: UserProfile 1:N StagedCallScenario)"
+        },
+        "name": {
+          "type": "string",
+          "description": "A user-defined name for the staged call scenario (e.g., 'Fake Call from Boss')."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of what this staged call scenario entails."
+        },
+        "stagedCallAssetIds": {
+          "type": "array",
+          "description": "An array of IDs referencing StagedCallAsset entities used in this scenario. (Relationship: StagedCallScenario N:N StagedCallAsset)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confirmationCallScheduled": {
+          "type": "boolean",
+          "description": "A flag indicating whether a confirmation call should be scheduled after the staged call ends."
+        },
+        "confirmationCallDelayMinutes": {
+          "type": "number",
+          "description": "The delay in minutes before scheduling a confirmation call, if enabled."
+        },
+        "aiGeneratedScript": {
+          "type": "string",
+          "description": "The text of an AI-generated script for this scenario, which can be further customized by the user."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this staged call scenario was created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating the last time this staged call scenario was updated.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "name",
+        "stagedCallAssetIds",
+        "confirmationCallScheduled",
+        "createdAt"
+      ]
+    },
+    "Incident": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Incident",
+      "type": "object",
+      "description": "Represents a single safety incident initiated by a user, encapsulating details about Loud Alarms, Silent Alarms, or Staged Calls.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Incident entity."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who initiated this incident. (Relationship: UserProfile 1:N Incident)"
+        },
+        "incidentType": {
+          "type": "string",
+          "description": "The type of safety incident: 'LoudAlarm', 'SilentAlarm', or 'StagedCall'."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the incident (e.g., 'active', 'resolved', 'duressResolved', 'cancelled')."
+        },
+        "initialContext": {
+          "type": "string",
+          "description": "Any initial text context provided by the user when the incident was triggered (e.g., 'feeling unsafe', 'car trouble')."
+        },
+        "currentLocationLatitude": {
+          "type": "number",
+          "description": "The latitude coordinate of the user's last known location during the incident."
+        },
+        "currentLocationLongitude": {
+          "type": "number",
+          "description": "The longitude coordinate of the user's last known location during the incident."
+        },
+        "currentLocationTimestamp": {
+          "type": "string",
+          "description": "Timestamp when the 'currentLocationLatitude' and 'currentLocationLongitude' were recorded.",
+          "format": "date-time"
+        },
+        "triggerTime": {
+          "type": "string",
+          "description": "Timestamp when the incident was initially triggered by the user.",
+          "format": "date-time"
+        },
+        "resolveTime": {
+          "type": "string",
+          "description": "Timestamp when the incident was resolved, if applicable.",
+          "format": "date-time"
+        },
+        "duressActivated": {
+          "type": "boolean",
+          "description": "A flag indicating whether the duress passcode was used during an attempt to resolve or stop the alarm."
+        },
+        "resolvedByType": {
+          "type": "string",
+          "description": "The manner in which the incident was resolved (e.g., 'userCancelled', 'safety', 'falseAlarm', 'duress')."
+        },
+        "stagedCallScenarioId": {
+          "type": "string",
+          "description": "Reference to the StagedCallScenario used, if the incidentType is 'StagedCall'. (Relationship: Incident 1:1 StagedCallScenario)"
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "incidentType",
+        "status",
+        "triggerTime",
+        "currentLocationLatitude",
+        "currentLocationLongitude",
+        "currentLocationTimestamp"
+      ]
+    },
+    "IncidentAction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "IncidentAction",
+      "type": "object",
+      "description": "Records individual actions and events that occur during an active safety incident, such as SMS sends, location updates, or call attempts.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the IncidentAction entity."
+        },
+        "incidentId": {
+          "type": "string",
+          "description": "Reference to the Incident this action belongs to. (Relationship: Incident 1:N IncidentAction)"
+        },
+        "actionType": {
+          "type": "string",
+          "description": "The type of action performed (e.g., 'smsSent', 'locationUpdate', 'stagedCallAttempt', 'loudAlarmActivation', 'notificationSent')."
+        },
+        "actionTime": {
+          "type": "string",
+          "description": "Timestamp when this action occurred.",
+          "format": "date-time"
+        },
+        "targetContactId": {
+          "type": "string",
+          "description": "Optional reference to the TrustedContact involved in this action, if applicable. (Relationship: IncidentAction N:1 TrustedContact)"
+        },
+        "locationData": {
+          "type": "string",
+          "description": "A JSON string containing location details (latitude, longitude, accuracy, timestamp) if actionType is 'locationUpdate'."
+        },
+        "smsDetails": {
+          "type": "string",
+          "description": "A JSON string containing SMS details (toNumber, messageBody, twilioSid, deliveryStatus) if actionType is 'smsSent'."
+        },
+        "callDetails": {
+          "type": "string",
+          "description": "A JSON string containing staged call details (scenarioId, callDuration) if actionType is 'stagedCallAttempt'."
+        },
+        "outcome": {
+          "type": "string",
+          "description": "The general outcome of the action (e.g., 'success', 'failure', 'pending')."
+        },
+        "errorMessage": {
+          "type": "string",
+          "description": "An optional error message if the action's outcome was 'failure'."
+        }
+      },
+      "required": [
+        "id",
+        "incidentId",
+        "actionType",
+        "actionTime",
+        "outcome"
+      ]
+    },
+    "DeviceToken": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DeviceToken",
+      "type": "object",
+      "description": "Stores Firebase Cloud Messaging (FCM) tokens for a user's devices to enable push notifications for real-time updates.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the DeviceToken entity, often corresponding to the FCM token itself."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to the UserProfile that owns this device token. (Relationship: UserProfile 1:N DeviceToken)"
+        },
+        "fcmToken": {
+          "type": "string",
+          "description": "The Firebase Cloud Messaging device token, used for sending push notifications."
+        },
+        "deviceType": {
+          "type": "string",
+          "description": "The type of device (e.g., 'iOS', 'Android')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when this device token was registered.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp indicating the last time this device token record was updated (e.g., refreshed).",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userProfileId",
+        "fcmToken",
+        "deviceType",
+        "createdAt"
+      ]
+    },
+    "AuditLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AuditLog",
+      "type": "object",
+      "description": "Records significant user actions or system events for auditing, security, and debugging purposes within the UAlright application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AuditLog entry."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Optional reference to the UserProfile associated with the action or event. Can be null for system-level events. (Relationship: UserProfile 1:N AuditLog)"
+        },
+        "eventType": {
+          "type": "string",
+          "description": "The type of event recorded (e.g., 'login', 'incidentCreated', 'settingsUpdated', 'assetUploaded')."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Timestamp when the audit event occurred.",
+          "format": "date-time"
+        },
+        "details": {
+          "type": "string",
+          "description": "A JSON string containing event-specific details (e.g., '{ \"incidentId\": \"...\", \"oldValue\": \"...\", \"newValue\": \"...\" }')."
+        },
+        "ipAddress": {
+          "type": "string",
+          "description": "The IP address from which the action was initiated, for security and abuse prevention."
+        },
+        "userAgent": {
+          "type": "string",
+          "description": "The User-Agent string from the client device that initiated the action."
+        },
+        "source": {
+          "type": "string",
+          "description": "Indicates the origin of the event (e.g., 'iOS app', 'Cloud Function', 'Admin Console')."
+        }
+      },
+      "required": [
+        "id",
+        "eventType",
+        "timestamp",
+        "source"
+      ]
     }
   },
   "auth": {
-    "providers": ["google.com", "phone"]
+    "providers": [
+      "password",
+      "anonymous"
+    ]
   },
   "firestore": {
-    "/users/{userId}": {
-      "schema": "UserProfile",
-      "description": "User profile data."
-    },
-    "/users/{userId}/contacts/{contactId}": {
-      "schema": "TrustedContact",
-      "description": "User's trusted contacts."
-    },
-    "/incidents/{incidentId}": {
-      "schema": "Incident",
-      "description": "Global incident records."
-    }
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores core profile information for a user. The document ID `{userId}` matches the Firebase Authentication UID, providing direct path-based ownership for secure access. Allows `read/write` only by the owning user."
+        }
+      },
+      {
+        "path": "/users/{userId}/trustedContacts/{contactId}",
+        "definition": {
+          "entityName": "TrustedContact",
+          "schema": {
+            "$ref": "#/backend/entities/TrustedContact"
+          },
+          "description": "Stores information for a user's trusted contacts. This subcollection uses path-based ownership, where access is restricted to the `{userId}` owner. The 'userProfileId' field in the document serves as an integrity check.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the UserProfile owner."
+            },
+            {
+              "name": "contactId",
+              "description": "The unique ID of the TrustedContact document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/safetyProfile",
+        "definition": {
+          "entityName": "SafetyProfile",
+          "schema": {
+            "$ref": "#/backend/entities/SafetyProfile"
+          },
+          "description": "Contains a user's personalized safety settings. This is a singleton document within a subcollection, with the document ID fixed as 'safetyProfile' to represent a 1:1 relationship with the UserProfile. Access is restricted to the `{userId}` owner. The 'userProfileId' field in the document serves as an integrity check.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the UserProfile owner."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/stagedCallAssets/{assetId}",
+        "definition": {
+          "entityName": "StagedCallAsset",
+          "schema": {
+            "$ref": "#/backend/entities/StagedCallAsset"
+          },
+          "description": "Stores metadata for a user's staged call audio/video assets. Access is restricted to the `{userId}` owner via path-based ownership. The 'userProfileId' field in the document serves as an integrity check.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the UserProfile owner."
+            },
+            {
+              "name": "assetId",
+              "description": "The unique ID of the StagedCallAsset document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/stagedCallScenarios/{scenarioId}",
+        "definition": {
+          "entityName": "StagedCallScenario",
+          "schema": {
+            "$ref": "#/backend/entities/StagedCallScenario"
+          },
+          "description": "Defines pre-configured staged call scenarios for a user. Access is restricted to the `{userId}` owner via path-based ownership. The 'userProfileId' field in the document serves as an integrity check.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the UserProfile owner."
+            },
+            {
+              "name": "scenarioId",
+              "description": "The unique ID of the StagedCallScenario document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/incidents/{incidentId}",
+        "definition": {
+          "entityName": "Incident",
+          "schema": {
+            "$ref": "#/backend/entities/Incident"
+          },
+          "description": "Represents a single safety incident initiated by a user. Access is restricted to the `{userId}` owner via path-based ownership. The 'userProfileId' field in the document serves as an integrity check.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the UserProfile owner."
+            },
+            {
+              "name": "incidentId",
+              "description": "The unique ID of the Incident document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/incidents/{incidentId}/incidentActions/{actionId}",
+        "definition": {
+          "entityName": "IncidentAction",
+          "schema": {
+            "$ref": "#/backend/entities/IncidentAction"
+          },
+          "description": "Records individual actions and events during an active safety incident. Each document includes a denormalized 'userProfileId' which MUST match the '{userId}' in the path for Authorization Independence, avoiding 'get()' calls to the parent incident. Access is restricted to the `{userId}` owner.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the UserProfile owner, denormalized for authorization."
+            },
+            {
+              "name": "incidentId",
+              "description": "The unique ID of the parent Incident document."
+            },
+            {
+              "name": "actionId",
+              "description": "The unique ID of the IncidentAction document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/deviceTokens/{tokenId}",
+        "definition": {
+          "entityName": "DeviceToken",
+          "schema": {
+            "$ref": "#/backend/entities/DeviceToken"
+          },
+          "description": "Stores Firebase Cloud Messaging (FCM) tokens for a user's devices. Access is restricted to the `{userId}` owner via path-based ownership. The 'userProfileId' field in the document serves as an integrity check.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the UserProfile owner."
+            },
+            {
+              "name": "tokenId",
+              "description": "The unique ID of the DeviceToken document, often the FCM token itself."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/auditLogs/{logId}",
+        "definition": {
+          "entityName": "AuditLog",
+          "schema": {
+            "$ref": "#/backend/entities/AuditLog"
+          },
+          "description": "Records user-specific significant actions or events for auditing. Each document includes a 'userProfileId' which MUST match the '{userId}' in the path for authorization. This segregates user-specific logs, enabling individual users to view their own actions and ensuring QAPs.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique ID of the UserProfile owner."
+            },
+            {
+              "name": "logId",
+              "description": "The unique ID of the AuditLog entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/systemAuditLogs/{logId}",
+        "definition": {
+          "entityName": "AuditLog",
+          "schema": {
+            "$ref": "#/backend/entities/AuditLog"
+          },
+          "description": "Records system-wide or non-user-specific significant actions and events. This collection is for internal system auditing and debugging, with access typically restricted to administrators or backend services. It ensures segregation from user-owned audit logs, maintaining homogeneous security postures.",
+          "params": [
+            {
+              "name": "logId",
+              "description": "The unique ID of the AuditLog entry."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure for UAlright is designed around the core principles of Authorization Independence, Structural Segregation, and Path-Based Access Modeling to ensure robust security, scalability, and debuggability. All user-specific data is organized hierarchically under a `/users/{userId}` root collection, where `{userId}` directly corresponds to `request.auth.uid`. This immediately provides strong user isolation and simplifies security rules.\n\n**Authorization Independence:** This critical principle is achieved primarily through two strategies:\n1.  **Path-Based Ownership:** For top-level user entities and their direct 1:N subcollections (e.g., `trustedContacts`, `stagedCallAssets`, `incidents`), the `userId` in the path (`/users/{userId}/...`) is the sole authority. Firebase Security Rules can directly compare `request.auth.uid` with this path segment, eliminating the need for expensive and complex `get()` calls to parent documents for authorization checks. For instance, a user can only access data where `{userId}` matches their `request.auth.uid`.\n2.  **Denormalization for Nested Subcollections:** For deeply nested data, such as `incidentActions` which are children of `incidents`, authorization details from the parent (`userProfileId` of the incident owner) are denormalized and stored directly within each `IncidentAction` document. This allows `IncidentAction` documents to be authorized without fetching their parent `Incident` document, preserving atomic operations (transactions/batches) and making rules simpler and more performant. For example, an `IncidentAction` document will include `userProfileId` which *must* match the `{userId}` in its path, allowing rules to check `request.auth.uid == userId && resource.data.userProfileId == userId`.\n\n**QAPs (Rules are not Filters):** The structural design inherently supports Query and Access Patterns (QAPs) by ensuring that `list` operations are always secure and efficient. Since all user-specific data lives under `/users/{request.auth.uid}/...`, any query made by an authenticated user is implicitly scoped to their own data. Security rules will enforce that `{userId}` in the path *must* match `request.auth.uid`, thus preventing users from listing or accessing data belonging to other users. This means the client-side queries do not rely on security rules to filter results; instead, the structure and rules *prevent* unauthorized queries from even executing, leading to predictable security and performance.\n\n**Structural Segregation:** Each collection and subcollection (`trustedContacts`, `safetyProfile`, `incidents`, `stagedCallAssets`, etc.) maintains a homogeneous security posture. All documents within a given subcollection of a specific user (`/users/{userId}/trustedContacts`) are owned by that `userId` and share the same access requirements. This avoids mixing data with different authorization needs within the same collection, making security rules straightforward and easier to debug. For instance, public data (not present in this schema) would be in a top-level collection, completely separate from user-private data. We also segregate user-specific audit logs from system-level audit logs to maintain distinct security postures."
   }
 }
