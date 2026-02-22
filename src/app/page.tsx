@@ -1,9 +1,10 @@
+
 "use client";
 
 import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Volume2, EyeOff, ShieldCheck, LogOut, LogIn } from 'lucide-react';
+import { Volume2, EyeOff, ShieldCheck, LogOut, LogIn, Loader2 } from 'lucide-react';
 import { useFirestore, useUser, useAuth } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
@@ -14,7 +15,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 export default function Home() {
   const firestore = useFirestore();
   const auth = useAuth();
-  const { user, loading } = useUser();
+  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
   const handleSignIn = async () => {
@@ -124,7 +125,7 @@ export default function Home() {
                 variant="ghost" 
                 className="w-full h-48 flex flex-col gap-3 hover:bg-destructive/5"
                 onClick={() => triggerAlarm('loud')}
-                disabled={loading}
+                disabled={isUserLoading}
               >
                 <div className="bg-destructive/10 p-3 rounded-full text-destructive">
                   <Volume2 size={32} />
@@ -143,7 +144,7 @@ export default function Home() {
                 variant="ghost" 
                 className="w-full h-48 flex flex-col gap-3 hover:bg-primary/5"
                 onClick={() => triggerAlarm('silent')}
-                disabled={loading}
+                disabled={isUserLoading}
               >
                 <div className="bg-muted p-3 rounded-full text-muted-foreground">
                   <EyeOff size={32} />
@@ -161,20 +162,28 @@ export default function Home() {
           <h2 className="text-xl font-bold text-primary px-2">Safety Status</h2>
           <Card className="border-none shadow-lg bg-white/70 backdrop-blur-md rounded-2xl">
             <CardContent className="p-6 flex items-center gap-4">
-              <div className={`w-3 h-3 rounded-full ${user ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-amber-400'}`} />
+              {isUserLoading ? (
+                <Loader2 className="animate-spin text-primary" size={24} />
+              ) : (
+                <div className={`w-3 h-3 rounded-full ${user ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]' : 'bg-amber-400'}`} />
+              )}
               <div className="flex-1">
                 <p className="text-base font-bold">
-                  {user ? 'Monitoring active' : 'Awaiting sign-in'}
+                  {isUserLoading ? 'Connecting...' : user ? 'Monitoring active' : 'Awaiting sign-in'}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  {user ? 'Location sharing ready for silent alarm.' : 'Sign in to enable location sharing services.'}
+                  {isUserLoading 
+                    ? 'Verifying your security status...' 
+                    : user 
+                      ? 'Location sharing ready for silent alarm.' 
+                      : 'Sign in to enable location sharing services.'}
                 </p>
               </div>
             </CardContent>
           </Card>
         </section>
 
-        {!user && !loading && (
+        {!user && !isUserLoading && (
           <div className="flex flex-col items-center pt-8">
             <Button className="w-full max-w-sm rounded-full py-6 flex gap-2 font-bold shadow-lg" onClick={handleSignIn}>
               <LogIn size={20} />
