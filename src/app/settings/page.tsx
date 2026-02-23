@@ -1,14 +1,22 @@
+"use client";
+
 import { Navigation } from '@/components/Navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, Lock, Bell, User } from 'lucide-react';
+import { Users, Lock, Bell, User as UserIcon, Loader2 } from 'lucide-react';
+import { useUser } from '@/firebase';
 
 export default function SettingsPage() {
+  const { user, isUserLoading } = useUser();
+
+  const initials = user?.displayName
+    ? user.displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : user?.email ? user.email[0].toUpperCase() : 'U';
+
   return (
     <div className="min-h-screen pb-24 md:pl-20 md:pb-0 bg-background font-body">
       <div className="p-6 max-w-2xl mx-auto space-y-8">
@@ -18,27 +26,39 @@ export default function SettingsPage() {
         </header>
 
         <section className="space-y-6">
-          <Card>
+          <Card className="overflow-hidden border-none shadow-lg bg-white/50 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
-                <User size={20} className="text-primary" />
+                <UserIcon size={20} className="text-primary" />
                 Profile
               </CardTitle>
             </CardHeader>
             <CardContent className="flex items-center gap-6">
-              <Avatar className="h-20 w-20 border-2 border-primary/10">
-                <AvatarImage src="https://picsum.photos/seed/u1/200" />
-                <AvatarFallback>JD</AvatarFallback>
-              </Avatar>
-              <div className="space-y-1 flex-1">
-                <h3 className="font-bold">Jane Doe</h3>
-                <p className="text-sm text-muted-foreground">jane.doe@example.com</p>
-                <Button variant="link" size="sm" className="p-0 h-auto text-primary">Edit Profile</Button>
-              </div>
+              {isUserLoading ? (
+                <div className="h-20 w-20 rounded-full bg-muted/50 animate-pulse flex items-center justify-center">
+                  <Loader2 className="animate-spin text-muted-foreground/30" size={24} />
+                </div>
+              ) : user ? (
+                <>
+                  <Avatar className="h-20 w-20 border-2 border-primary/10 shadow-sm">
+                    <AvatarImage src={user.photoURL || `https://picsum.photos/seed/${user.uid}/200`} />
+                    <AvatarFallback className="bg-primary/5 text-primary font-bold">{initials}</AvatarFallback>
+                  </Avatar>
+                  <div className="space-y-1 flex-1">
+                    <h3 className="font-bold text-lg">{user.displayName || 'Authenticated User'}</h3>
+                    <p className="text-sm text-muted-foreground font-medium">{user.email}</p>
+                    <Button variant="link" size="sm" className="p-0 h-auto text-primary font-bold">Edit Profile</Button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex-1 py-4 text-center">
+                  <p className="text-sm text-muted-foreground italic">Sign in to view and manage your profile.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-none shadow-lg">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Users size={20} className="text-primary" />
@@ -46,16 +66,17 @@ export default function SettingsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <ContactItem name="Mom" phone="+1 (555) 001" />
-              <ContactItem name="Mark (Partner)" phone="+1 (555) 002" />
-              <Separator />
-              <Button variant="outline" className="w-full border-dashed">
+              <div className="bg-muted/30 p-4 rounded-xl text-center border-2 border-dashed border-muted">
+                <p className="text-sm text-muted-foreground font-medium">No contacts added yet</p>
+                <Button variant="link" size="sm" className="mt-1 text-primary">Import from phone</Button>
+              </div>
+              <Button variant="outline" className="w-full rounded-xl font-bold py-6">
                 Add New Contact
               </Button>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-none shadow-lg">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Lock size={20} className="text-primary" />
@@ -65,15 +86,15 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Duress Passcode</Label>
+                  <Label className="font-bold">Duress Passcode</Label>
                   <p className="text-xs text-muted-foreground italic">Quietly escalates while appearing to stop.</p>
                 </div>
-                <Button variant="outline" size="sm">Set Code</Button>
+                <Button variant="outline" size="sm" className="rounded-full">Set Code</Button>
               </div>
               <Separator />
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <Label>Biometric Auth</Label>
+                  <Label className="font-bold">Biometric Auth</Label>
                   <p className="text-xs text-muted-foreground">Use FaceID to unlock the app.</p>
                 </div>
                 <Switch defaultChecked />
@@ -81,7 +102,7 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-none shadow-lg">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Bell size={20} className="text-primary" />
@@ -90,11 +111,11 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
-                <Label>Confirmation Calls</Label>
+                <Label className="font-bold">Confirmation Calls</Label>
                 <Switch defaultChecked />
               </div>
               <div className="flex items-center justify-between">
-                <Label>System Alerts</Label>
+                <Label className="font-bold">System Alerts</Label>
                 <Switch defaultChecked />
               </div>
             </CardContent>
@@ -102,18 +123,6 @@ export default function SettingsPage() {
         </section>
       </div>
       <Navigation />
-    </div>
-  );
-}
-
-function ContactItem({ name, phone }: { name: string, phone: string }) {
-  return (
-    <div className="flex justify-between items-center p-2 rounded-lg hover:bg-muted/20 transition-colors">
-      <div>
-        <p className="text-sm font-bold">{name}</p>
-        <p className="text-xs text-muted-foreground">{phone}</p>
-      </div>
-      <Button variant="ghost" size="sm" className="text-muted-foreground">Manage</Button>
     </div>
   );
 }
