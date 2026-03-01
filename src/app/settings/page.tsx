@@ -61,14 +61,6 @@ export default function SettingsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  // Feature detection state
-  const [canImport, setCanImport] = useState(false);
-
-  // Check for Contact Picker API support on mount
-  useEffect(() => {
-    setCanImport('contacts' in navigator && 'ContactsManager' in window);
-  }, []);
-
   // Add Contact State
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newContactName, setNewContactName] = useState('');
@@ -123,10 +115,13 @@ export default function SettingsPage() {
   };
 
   const handleImportFromPhone = async () => {
-    if (!canImport) {
+    // Dynamic detection inside the handler
+    const isSupported = 'contacts' in navigator && 'ContactsManager' in window;
+
+    if (!isSupported) {
       toast({
-        title: "Import Not Supported",
-        description: "Your browser doesn't support direct contact importing. Try using a mobile browser or add manually.",
+        title: "Feature Unavailable",
+        description: "Your current browser (likely iOS Safari or Desktop) doesn't support direct contact importing yet. Please add contacts manually.",
         variant: "destructive",
       });
       return;
@@ -281,16 +276,14 @@ export default function SettingsPage() {
                 Trusted Contacts
               </CardTitle>
               <div className="flex items-center gap-1">
-                {canImport && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-primary font-bold gap-1 h-8 px-2"
-                    onClick={handleImportFromPhone}
-                  >
-                    <Smartphone size={16} /> Import
-                  </Button>
-                )}
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-primary font-bold gap-1 h-8 px-2"
+                  onClick={handleImportFromPhone}
+                >
+                  <Smartphone size={16} /> Import
+                </Button>
                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild>
                     <Button variant="ghost" size="sm" className="text-primary font-bold gap-1 h-8 px-2">
