@@ -1,13 +1,23 @@
 
 "use client";
 
+import { useState } from 'react';
 import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Volume2, EyeOff, ShieldCheck, LogOut, LogIn, Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Volume2, EyeOff, ShieldCheck, LogOut, LogIn, Loader2, Mail, Lock } from 'lucide-react';
 import { useFirestore, useUser, useAuth } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signOut, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword 
+} from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -18,7 +28,11 @@ export default function Home() {
   const { user, isUserLoading } = useUser();
   const { toast } = useToast();
 
-  const handleSignIn = async () => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
+
+  const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     
@@ -34,6 +48,42 @@ export default function Home() {
         description: error.message,
         variant: "destructive",
       });
+    }
+  };
+
+  const handleEmailAuth = async (mode: 'signin' | 'signup') => {
+    if (!email || !password) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter both email and password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAuthLoading(true);
+    try {
+      if (mode === 'signup') {
+        await createUserWithEmailAndPassword(auth, email, password);
+        toast({
+          title: "Account Created",
+          description: "Welcome! Your safety profile is ready.",
+        });
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+        toast({
+          title: "Signed In",
+          description: "Welcome back to UAlright.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: mode === 'signup' ? "Registration Failed" : "Sign In Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsAuthLoading(false);
     }
   };
 
@@ -65,7 +115,6 @@ export default function Home() {
 
     if (!firestore) return;
 
-    // Use Geolocation API to get current position
     if ("geolocation" in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -73,7 +122,6 @@ export default function Home() {
           saveIncident(type, latitude, longitude);
         },
         (error) => {
-          console.error("Geolocation error:", error);
           toast({
             title: "Location Access Required",
             description: "We couldn't get your location. Triggering with placeholder data.",
@@ -210,13 +258,92 @@ export default function Home() {
         </section>
 
         {!user && !isUserLoading && (
-          <div className="flex flex-col items-center w-full max-w-md pt-8">
-            <Button className="w-full rounded-full py-7 flex gap-3 text-lg font-bold shadow-lg" onClick={handleSignIn}>
-              <LogIn size={24} />
-              Sign In with Google
-            </Button>
-            <p className="text-xs text-muted-foreground mt-4">Secure Access Required</p>
-          </div>
+          <Card className="w-full max-w-md border-none shadow-2xl bg-white rounded-3xl overflow-hidden">
+            <CardHeader className="text-center pb-2">
+              <CardTitle className="text-2xl font-bold text-primary">Secure Access</CardTitle>
+              <CardDescription>Sign in to activate monitoring</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <Tabs defaultValue="signin" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-4 bg-muted/50 p-1 rounded-xl">
+                  <TabsTrigger value="signin" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Login</TabsTrigger>
+                  <TabsTrigger value="signup" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">Sign Up</TabsTrigger>
+                </TabsList>
+                
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Email Address</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                      <Input 
+                        id="email" 
+                        type="email" 
+                        placeholder="you@example.com" 
+                        className="pl-10 h-12 rounded-xl bg-muted/20 border-none"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                      <Input 
+                        id="password" 
+                        type="password" 
+                        placeholder="••••••••" 
+                        className="pl-10 h-12 rounded-xl bg-muted/20 border-none"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <TabsContent value="signin" className="mt-6">
+                  <Button 
+                    className="w-full h-12 rounded-xl font-bold text-lg shadow-lg shadow-primary/20"
+                    onClick={() => handleEmailAuth('signin')}
+                    disabled={isAuthLoading}
+                  >
+                    {isAuthLoading ? <Loader2 className="animate-spin" /> : "Sign In"}
+                  </Button>
+                </TabsContent>
+                
+                <TabsContent value="signup" className="mt-6">
+                  <Button 
+                    className="w-full h-12 rounded-xl font-bold text-lg shadow-lg shadow-primary/20"
+                    onClick={() => handleEmailAuth('signup')}
+                    disabled={isAuthLoading}
+                  >
+                    {isAuthLoading ? <Loader2 className="animate-spin" /> : "Create Account"}
+                  </Button>
+                </TabsContent>
+              </Tabs>
+
+              <div className="relative flex items-center gap-4 py-2">
+                <div className="flex-1 h-px bg-muted" />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">or</span>
+                <div className="flex-1 h-px bg-muted" />
+              </div>
+
+              <Button 
+                variant="outline" 
+                className="w-full h-12 rounded-xl flex gap-3 text-base font-bold border-2 hover:bg-muted/10 transition-colors"
+                onClick={handleGoogleSignIn}
+                disabled={isAuthLoading}
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                  <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                  <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                  <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                  <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                </svg>
+                Sign in with Google
+              </Button>
+            </CardContent>
+          </Card>
         )}
       </div>
       <Navigation />
