@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Volume2, EyeOff, ShieldCheck, LogOut, LogIn, Loader2, Mail, Lock } from 'lucide-react';
-import { useFirestore, useUser, useAuth, setDocumentNonBlocking } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { useFirestore, useUser, useAuth, setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { collection, serverTimestamp, doc, getDocs, getDoc, query, where } from 'firebase/firestore';
 import { 
   signInWithPopup, 
   GoogleAuthProvider, 
@@ -22,6 +22,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { silentAlarmDispatch } from '@/ai/flows/silent-alarm-dispatch-flow';
 
 export default function Home() {
   const firestore = useFirestore();
@@ -42,7 +43,7 @@ export default function Home() {
       email: firebaseUser.email,
       phoneNumber: firebaseUser.phoneNumber || 'Not provided',
       updatedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(), // setDoc with merge handles this
+      createdAt: new Date().toISOString(),
     }, { merge: true });
   };
 
@@ -153,7 +154,7 @@ export default function Home() {
     }
   };
 
-  const saveIncident = (type: 'loud' | 'silent', lat: number, lng: number) => {
+  const saveIncident = async (type: 'loud' | 'silent', lat: number, lng: number) => {
     if (!user || !firestore) return;
 
     const incidentData = {
@@ -168,25 +169,86 @@ export default function Home() {
     };
 
     const incidentsRef = collection(firestore, 'users', user.uid, 'incidents');
+    const incidentDocRef = doc(incidentsRef);
+    const incidentId = incidentDocRef.id;
 
-    addDoc(incidentsRef, incidentData)
-      .then(() => {
+    // Use non-blocking set for optimistic UI
+    setDocumentNonBlocking(incidentDocRef, incidentData, { merge: true });
+
+    toast({
+      title: `${type.charAt(0).toUpperCase() + type.slice(1)} Alarm Triggered`,
+      description: type === 'loud' 
+        ? "Deterrence activated. Contacts will be notified if not resolved."
+        : "Silent alert initiated. Your location is being shared with trusted contacts.",
+      variant: type === 'loud' ? "destructive" : "default",
+    });
+
+    // For silent alarms, proceed with Twilio dispatch
+    if (type === 'silent') {
+      try {
+        // 1. Fetch active trusted contacts
+        const contactsSnap = await getDocs(collection(firestore, 'users', user.uid, 'trustedContacts'));
+        const activeContacts = contactsSnap.docs
+          .map(d => ({ id: d.id, ...d.data() as any }))
+          .filter(c => c.isActive);
+
+        if (activeContacts.length === 0) {
+          toast({
+            title: "No Contacts Configured",
+            description: "Go to Settings to add trusted contacts for silent alerts.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // 2. Fetch safety profile for customized message
+        const safetySnap = await getDoc(doc(firestore, 'users', user.uid, 'safetyProfile', 'safetyProfile'));
+        const safetyData = safetySnap.data();
+        const messageTemplate = safetyData?.defaultSmsTemplate || "I have triggered a silent safety alarm. I am feeling unsafe and need you to check on me immediately.";
+
+        // 3. Dispatch Twilio alerts
+        const locationUrl = lat !== 0 ? `https://www.google.com/maps?q=${lat},${lng}` : undefined;
+        
+        const dispatchResult = await silentAlarmDispatch({
+          contacts: activeContacts.map(c => ({
+            id: c.id,
+            name: c.name,
+            phoneNumber: c.phoneNumber
+          })),
+          message: messageTemplate,
+          userName: user.displayName || "A user",
+          locationUrl,
+        });
+
+        // 4. Record IncidentActions in Firestore (Non-blocking)
+        const actionsRef = collection(firestore, 'users', user.uid, 'incidents', incidentId, 'incidentActions');
+        dispatchResult.results.forEach(res => {
+          addDocumentNonBlocking(actionsRef, {
+            incidentId,
+            userProfileId: user.uid,
+            actionType: 'notificationSent',
+            actionTime: new Date().toISOString(),
+            targetContactId: res.contactId,
+            outcome: (res.smsSuccess || res.callSuccess) ? 'success' : 'failure',
+            errorMessage: res.error || null,
+          });
+        });
+
+        if (dispatchResult.results.some(r => r.smsSuccess || r.callSuccess)) {
+          toast({
+            title: "Alerts Dispatched",
+            description: "Your trusted contacts have been notified via SMS and Voice Call.",
+          });
+        }
+      } catch (err: any) {
+        console.error("Alert dispatch failed", err);
         toast({
-          title: `${type.charAt(0).toUpperCase() + type.slice(1)} Alarm Triggered`,
-          description: type === 'loud' 
-            ? "Deterrence activated. Contacts will be notified if not resolved."
-            : "Silent alert sent. Your location is now being shared with trusted contacts.",
-          variant: type === 'loud' ? "destructive" : "default",
+          title: "Dispatch Error",
+          description: "There was a problem sending alerts to some contacts.",
+          variant: "destructive",
         });
-      })
-      .catch(async () => {
-        const permissionError = new FirestorePermissionError({
-          path: `users/${user.uid}/incidents`,
-          operation: 'create',
-          requestResourceData: incidentData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-      });
+      }
+    }
   };
 
   return (
