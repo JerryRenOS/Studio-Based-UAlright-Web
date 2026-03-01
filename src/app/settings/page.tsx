@@ -40,7 +40,8 @@ import {
   Phone, 
   UserPlus, 
   Heart,
-  Pencil
+  Pencil,
+  Smartphone
 } from 'lucide-react';
 import { 
   useUser, 
@@ -111,6 +112,69 @@ export default function SettingsPage() {
     setNewContactRelationship('');
     setIsAddDialogOpen(false);
     setIsSubmitting(false);
+  };
+
+  const handleImportFromPhone = async () => {
+    // Check for Contact Picker API support
+    const supportsContacts = 'contacts' in navigator && 'ContactsManager' in window;
+    
+    if (!supportsContacts) {
+      toast({
+        title: "Import Not Supported",
+        description: "Your browser doesn't support direct contact importing. Try using a mobile browser or add manually.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const props = ['name', 'tel'];
+      const opts = { multiple: false };
+      
+      // @ts-ignore - Contact Picker API is modern and might not be in all TS types yet
+      const selectedContacts = await navigator.contacts.select(props, opts);
+      
+      if (selectedContacts && selectedContacts.length > 0) {
+        const contact = selectedContacts[0];
+        const name = contact.name?.[0] || 'Unknown';
+        const phone = contact.tel?.[0] || '';
+
+        if (!phone) {
+          toast({
+            title: "No Phone Number",
+            description: "The selected contact doesn't have a phone number.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        if (user && firestore) {
+          const contactsRef = collection(firestore, 'users', user.uid, 'trustedContacts');
+          addDocumentNonBlocking(contactsRef, {
+            userProfileId: user.uid,
+            name: name,
+            phoneNumber: phone,
+            relationship: 'Other',
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+
+          toast({
+            title: "Contact Imported",
+            description: `${name} has been added to your safety circle.`,
+          });
+        }
+      }
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        toast({
+          title: "Import Failed",
+          description: "Something went wrong while accessing your contacts.",
+          variant: "destructive"
+        });
+      }
+    }
   };
 
   const handleEditClick = (contact: any) => {
@@ -206,67 +270,77 @@ export default function SettingsPage() {
 
           {/* Trusted Contacts Card */}
           <Card className="border-none shadow-lg">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Users size={20} className="text-primary" />
                 Trusted Contacts
               </CardTitle>
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-primary font-bold gap-1">
-                    <Plus size={16} /> Add
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <UserPlus className="text-primary" size={20} />
-                      Add Trusted Contact
-                    </DialogTitle>
-                    <DialogDescription>
-                      This person will be notified during silent or loud alarms.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input 
-                        id="name" 
-                        placeholder="e.g. Jane Doe" 
-                        value={newContactName}
-                        onChange={(e) => setNewContactName(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input 
-                        id="phone" 
-                        placeholder="+1 (555) 000-0000" 
-                        value={newContactPhone}
-                        onChange={(e) => setNewContactPhone(e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="relationship">Relationship</Label>
-                      <Input 
-                        id="relationship" 
-                        placeholder="e.g. Sister, Friend, Partner" 
-                        value={newContactRelationship}
-                        onChange={(e) => setNewContactRelationship(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button 
-                      className="w-full rounded-xl font-bold py-6"
-                      onClick={handleAddContact}
-                      disabled={isSubmitting || !newContactName || !newContactPhone}
-                    >
-                      {isSubmitting ? <Loader2 className="animate-spin" /> : "Save Contact"}
+              <div className="flex items-center gap-1">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="text-primary font-bold gap-1 h-8 px-2"
+                  onClick={handleImportFromPhone}
+                >
+                  <Smartphone size={16} /> Import
+                </Button>
+                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-primary font-bold gap-1 h-8 px-2">
+                      <Plus size={16} /> Add
                     </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <UserPlus className="text-primary" size={20} />
+                        Add Trusted Contact
+                      </DialogTitle>
+                      <DialogDescription>
+                        This person will be notified during silent or loud alarms.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Full Name</Label>
+                        <Input 
+                          id="name" 
+                          placeholder="e.g. Jane Doe" 
+                          value={newContactName}
+                          onChange={(e) => setNewContactName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone Number</Label>
+                        <Input 
+                          id="phone" 
+                          placeholder="+1 (555) 000-0000" 
+                          value={newContactPhone}
+                          onChange={(e) => setNewContactPhone(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="relationship">Relationship</Label>
+                        <Input 
+                          id="relationship" 
+                          placeholder="e.g. Sister, Friend, Partner" 
+                          value={newContactRelationship}
+                          onChange={(e) => setNewContactRelationship(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button 
+                        className="w-full rounded-xl font-bold py-6"
+                        onClick={handleAddContact}
+                        disabled={isSubmitting || !newContactName || !newContactPhone}
+                      >
+                        {isSubmitting ? <Loader2 className="animate-spin" /> : "Save Contact"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {isContactsLoading ? (
