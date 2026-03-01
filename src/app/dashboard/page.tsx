@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -17,17 +18,21 @@ import {
   ChevronUp,
   History,
   Volume2,
-  EyeOff
+  EyeOff,
+  ShieldCheck
 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, limit, doc } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
 
   const incidentsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -42,6 +47,26 @@ export default function DashboardPage() {
 
   const activeIncident = incidents?.find(inc => inc.status === 'active');
   const allIncidents = incidents || [];
+
+  const handleResolve = (incidentId: string) => {
+    if (!user || !firestore) return;
+    
+    setIsResolving(true);
+    const docRef = doc(firestore, 'users', user.uid, 'incidents', incidentId);
+    
+    updateDocumentNonBlocking(docRef, { 
+      status: 'resolved', 
+      resolveTime: new Date().toISOString() 
+    });
+
+    toast({
+      title: "Incident Resolved",
+      description: "Safety status updated. Contacts have been notified that you are safe.",
+    });
+    
+    // Smooth transition for the UI
+    setTimeout(() => setIsResolving(false), 500);
+  };
 
   return (
     <div className="min-h-screen pb-24 md:pl-24 md:pb-0 bg-background font-body">
@@ -140,6 +165,21 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </div>
+
+                    <div className="pt-4 border-t border-black/5">
+                      <Button 
+                        className="w-full py-6 rounded-xl font-bold text-lg gap-2 shadow-md hover:scale-[1.01] transition-all" 
+                        variant={activeIncident.incidentType === 'LoudAlarm' ? "destructive" : "default"}
+                        onClick={() => handleResolve(activeIncident.id)}
+                        disabled={isResolving}
+                      >
+                        {isResolving ? <Loader2 className="animate-spin" size={20} /> : <ShieldCheck size={20} />}
+                        I'm Safe - Resolve Alarm
+                      </Button>
+                      <p className="text-[10px] text-center text-muted-foreground mt-2 uppercase tracking-widest font-bold opacity-60">
+                        This will notify trusted contacts that you are secure
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
               ) : (
@@ -235,8 +275,11 @@ function HistoryItem({ type, date, status, isActive }: { type: string, date: str
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-sm">{label}</h3>
               <Badge 
-                variant={isActive ? (isLoud ? "destructive" : "default") : "secondary"} 
-                className="text-[9px] h-4 px-1.5 font-bold uppercase tracking-wider"
+                variant={isActive ? (isLoud ? "destructive" : "default") : (status === 'resolved' ? 'outline' : 'secondary')} 
+                className={cn(
+                  "text-[9px] h-4 px-1.5 font-bold uppercase tracking-wider",
+                  status === 'resolved' && "text-green-600 border-green-200 bg-green-50"
+                )}
               >
                 {status}
               </Badge>
@@ -248,7 +291,13 @@ function HistoryItem({ type, date, status, isActive }: { type: string, date: str
           </div>
         </div>
         <div className="opacity-20">
-          {isActive ? <AlertCircle size={18} className={isLoud ? "text-destructive" : "text-primary"} /> : <CheckCircle2 size={18} className="text-muted-foreground" />}
+          {isActive ? (
+            <AlertCircle size={18} className={isLoud ? "text-destructive" : "text-primary"} />
+          ) : status === 'resolved' ? (
+            <CheckCircle2 size={18} className="text-green-600" />
+          ) : (
+            <CheckCircle2 size={18} className="text-muted-foreground" />
+          )}
         </div>
       </CardContent>
     </Card>
