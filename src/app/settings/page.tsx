@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -53,7 +54,8 @@ import {
   useMemoFirebase, 
   addDocumentNonBlocking, 
   deleteDocumentNonBlocking,
-  updateDocumentNonBlocking
+  updateDocumentNonBlocking,
+  setDocumentNonBlocking
 } from '@/firebase';
 import { collection, query, doc } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
@@ -112,13 +114,16 @@ export default function SettingsPage() {
         photoURL: editPhotoURL,
       });
       
-      // Also update Firestore UserProfile document for consistency
+      // Also update Firestore UserProfile document for consistency.
+      // We use setDocumentNonBlocking with merge to satisfy create/update rules 
+      // and ensure document existence.
       if (firestore) {
         const userRef = doc(firestore, 'users', user.uid);
-        updateDocumentNonBlocking(userRef, {
+        setDocumentNonBlocking(userRef, {
+          id: user.uid, // Required for immutability check in rules
           displayName: editDisplayName,
           updatedAt: new Date().toISOString()
-        });
+        }, { merge: true });
       }
 
       toast({

@@ -9,14 +9,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Volume2, EyeOff, ShieldCheck, LogOut, LogIn, Loader2, Mail, Lock } from 'lucide-react';
-import { useFirestore, useUser, useAuth } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useUser, useAuth, setDocumentNonBlocking } from '@/firebase';
+import { collection, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { 
   signInWithPopup, 
   GoogleAuthProvider, 
   signOut, 
   signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword 
+  createUserWithEmailAndPassword,
+  User
 } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -32,12 +33,26 @@ export default function Home() {
   const [password, setPassword] = useState('');
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
+  const syncUserProfile = (firebaseUser: User) => {
+    if (!firestore) return;
+    const userRef = doc(firestore, 'users', firebaseUser.uid);
+    setDocumentNonBlocking(userRef, {
+      id: firebaseUser.uid,
+      displayName: firebaseUser.displayName || 'User',
+      email: firebaseUser.email,
+      phoneNumber: firebaseUser.phoneNumber || 'Not provided',
+      updatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(), // setDoc with merge handles this
+    }, { merge: true });
+  };
+
   const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
     
     try {
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+      syncUserProfile(result.user);
       toast({
         title: "Signed In",
         description: "Welcome to UAlright. Your safety monitoring is now active.",
@@ -64,13 +79,15 @@ export default function Home() {
     setIsAuthLoading(true);
     try {
       if (mode === 'signup') {
-        await createUserWithEmailAndPassword(auth, email, password);
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        syncUserProfile(result.user);
         toast({
           title: "Account Created",
           description: "Welcome! Your safety profile is ready.",
         });
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        const result = await signInWithEmailAndPassword(auth, email, password);
+        syncUserProfile(result.user);
         toast({
           title: "Signed In",
           description: "Welcome back to UAlright.",
