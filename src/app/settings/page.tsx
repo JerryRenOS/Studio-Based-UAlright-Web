@@ -41,11 +41,14 @@ import {
   UserPlus, 
   Heart,
   Pencil,
-  Smartphone
+  Smartphone,
+  Camera,
+  CheckCircle2
 } from 'lucide-react';
 import { 
   useUser, 
   useFirestore, 
+  useAuth,
   useCollection, 
   useMemoFirebase, 
   addDocumentNonBlocking, 
@@ -53,14 +56,22 @@ import {
   updateDocumentNonBlocking
 } from '@/firebase';
 import { collection, query, doc } from 'firebase/firestore';
+import { updateProfile } from 'firebase/auth';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 export default function SettingsPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const auth = useAuth();
   const { toast } = useToast();
   
+  // Profile Edit State
+  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
+  const [editDisplayName, setEditDisplayName] = useState('');
+  const [editPhotoURL, setEditPhotoURL] = useState('');
+  const [isProfileSubmitting, setIsProfileSubmitting] = useState(false);
+
   // Add Contact State
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newContactName, setNewContactName] = useState('');
@@ -82,6 +93,49 @@ export default function SettingsPage() {
   }, [firestore, user]);
 
   const { data: contacts, isLoading: isContactsLoading } = useCollection(contactsQuery);
+
+  // Pre-fill profile fields when dialog opens
+  useEffect(() => {
+    if (user && isProfileDialogOpen) {
+      setEditDisplayName(user.displayName || '');
+      setEditPhotoURL(user.photoURL || '');
+    }
+  }, [user, isProfileDialogOpen]);
+
+  const handleUpdateProfile = async () => {
+    if (!user || !auth) return;
+
+    setIsProfileSubmitting(true);
+    try {
+      await updateProfile(user, {
+        displayName: editDisplayName,
+        photoURL: editPhotoURL,
+      });
+      
+      // Also update Firestore UserProfile document for consistency
+      if (firestore) {
+        const userRef = doc(firestore, 'users', user.uid);
+        updateDocumentNonBlocking(userRef, {
+          displayName: editDisplayName,
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      toast({
+        title: "Profile Updated",
+        description: "Your safety profile has been updated successfully.",
+      });
+      setIsProfileDialogOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsProfileSubmitting(false);
+    }
+  };
 
   const handleAddContact = () => {
     if (!user || !firestore || !newContactName || !newContactPhone) return;
@@ -115,7 +169,6 @@ export default function SettingsPage() {
   };
 
   const handleImportFromPhone = async () => {
-    // Dynamic detection inside the handler
     const isSupported = 'contacts' in navigator && 'ContactsManager' in window;
 
     if (!isSupported) {
@@ -131,7 +184,7 @@ export default function SettingsPage() {
       const props = ['name', 'tel'];
       const opts = { multiple: false };
       
-      // @ts-ignore - Contact Picker API is modern and might not be in all TS types yet
+      // @ts-ignore - Contact Picker API is modern
       const selectedContacts = await navigator.contacts.select(props, opts);
       
       if (selectedContacts && selectedContacts.length > 0) {
@@ -257,7 +310,60 @@ export default function SettingsPage() {
                   <div className="space-y-1 flex-1">
                     <h3 className="font-bold text-lg">{user.displayName || 'Authenticated User'}</h3>
                     <p className="text-sm text-muted-foreground font-medium">{user.email}</p>
-                    <Button variant="link" size="sm" className="p-0 h-auto text-primary font-bold">Edit Profile</Button>
+                    <Dialog open={isProfileDialogOpen} onOpenChange={setIsProfileDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="link" size="sm" className="p-0 h-auto text-primary font-bold">Edit Profile</Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2">
+                            <Pencil className="text-primary" size={20} />
+                            Update Profile
+                          </DialogTitle>
+                          <DialogDescription>
+                            Change your public name and profile image.
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                          <div className="space-y-2 text-center flex flex-col items-center">
+                            <Avatar className="h-24 w-24 border-4 border-primary/5 mb-2">
+                              <AvatarImage src={editPhotoURL || user.photoURL || ''} />
+                              <AvatarFallback className="text-2xl font-bold bg-primary/5 text-primary">{initials}</AvatarFallback>
+                            </Avatar>
+                            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Avatar Preview</p>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="display-name">Display Name</Label>
+                            <Input 
+                              id="display-name" 
+                              placeholder="e.g. Alex Smith" 
+                              value={editDisplayName}
+                              onChange={(e) => setEditDisplayName(e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="photo-url" className="flex items-center gap-2">
+                              <Camera size={14} /> Profile Image URL
+                            </Label>
+                            <Input 
+                              id="photo-url" 
+                              placeholder="https://example.com/photo.jpg" 
+                              value={editPhotoURL}
+                              onChange={(e) => setEditPhotoURL(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button 
+                            className="w-full rounded-xl font-bold py-6 shadow-lg shadow-primary/10"
+                            onClick={handleUpdateProfile}
+                            disabled={isProfileSubmitting || !editDisplayName}
+                          >
+                            {isProfileSubmitting ? <Loader2 className="animate-spin" /> : "Save Profile"}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </>
               ) : (
