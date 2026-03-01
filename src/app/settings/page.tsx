@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from 'react';
 import { Navigation } from '@/components/Navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,11 +8,102 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, Lock, Bell, User as UserIcon, Loader2 } from 'lucide-react';
-import { useUser } from '@/firebase';
+import { Input } from '@/components/ui/input';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from '@/components/ui/dialog';
+import { 
+  Users, 
+  Lock, 
+  Bell, 
+  User as UserIcon, 
+  Loader2, 
+  Plus, 
+  Trash2, 
+  Phone, 
+  UserPlus, 
+  Heart 
+} from 'lucide-react';
+import { 
+  useUser, 
+  useFirestore, 
+  useCollection, 
+  useMemoFirebase, 
+  addDocumentNonBlocking, 
+  deleteDocumentNonBlocking 
+} from '@/firebase';
+import { collection, query, doc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 export default function SettingsPage() {
   const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  
+  // Form State
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [newContactName, setNewContactName] = useState('');
+  const [newContactPhone, setNewContactPhone] = useState('');
+  const [newContactRelationship, setNewContactRelationship] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch Contacts
+  const contactsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'users', user.uid, 'trustedContacts'));
+  }, [firestore, user]);
+
+  const { data: contacts, isLoading: isContactsLoading } = useCollection(contactsQuery);
+
+  const handleAddContact = () => {
+    if (!user || !firestore || !newContactName || !newContactPhone) return;
+
+    setIsSubmitting(true);
+    const contactsRef = collection(firestore, 'users', user.uid, 'trustedContacts');
+    
+    const contactData = {
+      userProfileId: user.uid,
+      name: newContactName,
+      phoneNumber: newContactPhone,
+      relationship: newContactRelationship || 'Other',
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    addDocumentNonBlocking(contactsRef, contactData);
+
+    toast({
+      title: "Contact Added",
+      description: `${newContactName} has been added to your trusted contacts.`,
+    });
+
+    // Reset and close
+    setNewContactName('');
+    setNewContactPhone('');
+    setNewContactRelationship('');
+    setIsAddDialogOpen(false);
+    setIsSubmitting(false);
+  };
+
+  const handleDeleteContact = (contactId: string, name: string) => {
+    if (!user || !firestore) return;
+
+    const contactRef = doc(firestore, 'users', user.uid, 'trustedContacts', contactId);
+    deleteDocumentNonBlocking(contactRef);
+
+    toast({
+      title: "Contact Removed",
+      description: `${name} is no longer a trusted contact.`,
+    });
+  };
 
   const initials = user?.displayName
     ? user.displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
@@ -26,6 +118,7 @@ export default function SettingsPage() {
         </header>
 
         <section className="space-y-6">
+          {/* Profile Card */}
           <Card className="overflow-hidden border-none shadow-lg bg-white/50 backdrop-blur-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -58,24 +151,115 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
+          {/* Trusted Contacts Card */}
           <Card className="border-none shadow-lg">
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Users size={20} className="text-primary" />
                 Trusted Contacts
               </CardTitle>
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="text-primary font-bold gap-1">
+                    <Plus size={16} /> Add
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <UserPlus className="text-primary" size={20} />
+                      Add Trusted Contact
+                    </DialogTitle>
+                    <DialogDescription>
+                      This person will be notified during silent or loud alarms.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name</Label>
+                      <Input 
+                        id="name" 
+                        placeholder="e.g. Jane Doe" 
+                        value={newContactName}
+                        onChange={(e) => setNewContactName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input 
+                        id="phone" 
+                        placeholder="+1 (555) 000-0000" 
+                        value={newContactPhone}
+                        onChange={(e) => setNewContactPhone(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="relationship">Relationship</Label>
+                      <Input 
+                        id="relationship" 
+                        placeholder="e.g. Sister, Friend, Partner" 
+                        value={newContactRelationship}
+                        onChange={(e) => setNewContactRelationship(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button 
+                      className="w-full rounded-xl font-bold py-6"
+                      onClick={handleAddContact}
+                      disabled={isSubmitting || !newContactName || !newContactPhone}
+                    >
+                      {isSubmitting ? <Loader2 className="animate-spin" /> : "Save Contact"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-muted/30 p-4 rounded-xl text-center border-2 border-dashed border-muted">
-                <p className="text-sm text-muted-foreground font-medium">No contacts added yet</p>
-                <Button variant="link" size="sm" className="mt-1 text-primary">Import from phone</Button>
-              </div>
-              <Button variant="outline" className="w-full rounded-xl font-bold py-6">
-                Add New Contact
-              </Button>
+              {isContactsLoading ? (
+                <div className="flex justify-center p-6">
+                  <Loader2 className="animate-spin text-primary" />
+                </div>
+              ) : contacts && contacts.length > 0 ? (
+                <div className="space-y-3">
+                  {contacts.map((contact) => (
+                    <div 
+                      key={contact.id} 
+                      className="flex items-center justify-between p-3 bg-muted/20 rounded-xl hover:bg-muted/30 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="bg-primary/10 p-2.5 rounded-full text-primary">
+                          <Heart size={16} />
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-sm font-bold">{contact.name}</p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Phone size={10} /> {contact.phoneNumber} • {contact.relationship}
+                          </p>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteContact(contact.id, contact.name)}
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-muted/30 p-8 rounded-2xl text-center border-2 border-dashed border-muted">
+                  <Users className="mx-auto text-muted-foreground/30 mb-2" size={32} />
+                  <p className="text-sm text-muted-foreground font-medium">No contacts added yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">Add people you trust to be notified in emergencies.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
+          {/* Security & Duress Card */}
           <Card className="border-none shadow-lg">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
@@ -102,6 +286,7 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
+          {/* Notifications Card */}
           <Card className="border-none shadow-lg">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
