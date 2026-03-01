@@ -39,7 +39,8 @@ import {
   Trash2, 
   Phone, 
   UserPlus, 
-  Heart 
+  Heart,
+  Pencil
 } from 'lucide-react';
 import { 
   useUser, 
@@ -47,7 +48,8 @@ import {
   useCollection, 
   useMemoFirebase, 
   addDocumentNonBlocking, 
-  deleteDocumentNonBlocking 
+  deleteDocumentNonBlocking,
+  updateDocumentNonBlocking
 } from '@/firebase';
 import { collection, query, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -58,12 +60,19 @@ export default function SettingsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  // Form State
+  // Add Contact State
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newContactName, setNewContactName] = useState('');
   const [newContactPhone, setNewContactPhone] = useState('');
   const [newContactRelationship, setNewContactRelationship] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Edit Contact State
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingContactId, setEditingContactId] = useState<string | null>(null);
+  const [editContactName, setEditContactName] = useState('');
+  const [editContactPhone, setEditContactPhone] = useState('');
+  const [editContactRelationship, setEditContactRelationship] = useState('');
 
   // Fetch Contacts
   const contactsQuery = useMemoFirebase(() => {
@@ -101,6 +110,39 @@ export default function SettingsPage() {
     setNewContactPhone('');
     setNewContactRelationship('');
     setIsAddDialogOpen(false);
+    setIsSubmitting(false);
+  };
+
+  const handleEditClick = (contact: any) => {
+    setEditingContactId(contact.id);
+    setEditContactName(contact.name);
+    setEditContactPhone(contact.phoneNumber);
+    setEditContactRelationship(contact.relationship);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateContact = () => {
+    if (!user || !firestore || !editingContactId || !editContactName || !editContactPhone) return;
+
+    setIsSubmitting(true);
+    const contactRef = doc(firestore, 'users', user.uid, 'trustedContacts', editingContactId);
+    
+    const updateData = {
+      name: editContactName,
+      phoneNumber: editContactPhone,
+      relationship: editContactRelationship || 'Other',
+      updatedAt: new Date().toISOString(),
+    };
+
+    updateDocumentNonBlocking(contactRef, updateData);
+
+    toast({
+      title: "Contact Updated",
+      description: `${editContactName}'s information has been saved.`,
+    });
+
+    setIsEditDialogOpen(false);
+    setEditingContactId(null);
     setIsSubmitting(false);
   };
 
@@ -249,34 +291,44 @@ export default function SettingsPage() {
                           </p>
                         </div>
                       </div>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Remove Trusted Contact?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will remove {contact.name} from your safety circle. They will no longer be notified during emergencies.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => handleDeleteContact(contact.id, contact.name)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      <div className="flex items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                          onClick={() => handleEditClick(contact)}
+                        >
+                          <Pencil size={16} />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                             >
-                              Remove
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                              <Trash2 size={16} />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Remove Trusted Contact?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will remove {contact.name} from your safety circle. They will no longer be notified during emergencies.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeleteContact(contact.id, contact.name)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Remove
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -289,6 +341,59 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Edit Contact Dialog */}
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Pencil className="text-primary" size={20} />
+                  Edit Trusted Contact
+                </DialogTitle>
+                <DialogDescription>
+                  Update the information for your trusted contact.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Full Name</Label>
+                  <Input 
+                    id="edit-name" 
+                    placeholder="e.g. Jane Doe" 
+                    value={editContactName}
+                    onChange={(e) => setEditContactName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-phone">Phone Number</Label>
+                  <Input 
+                    id="edit-phone" 
+                    placeholder="+1 (555) 000-0000" 
+                    value={editContactPhone}
+                    onChange={(e) => setEditContactPhone(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-relationship">Relationship</Label>
+                  <Input 
+                    id="edit-relationship" 
+                    placeholder="e.g. Sister, Friend, Partner" 
+                    value={editContactRelationship}
+                    onChange={(e) => setEditContactRelationship(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button 
+                  className="w-full rounded-xl font-bold py-6"
+                  onClick={handleUpdateContact}
+                  disabled={isSubmitting || !editContactName || !editContactPhone}
+                >
+                  {isSubmitting ? <Loader2 className="animate-spin" /> : "Save Changes"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Security & Duress Card */}
           <Card className="border-none shadow-lg">
