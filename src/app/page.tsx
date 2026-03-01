@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Navigation } from '@/components/Navigation';
@@ -64,13 +65,39 @@ export default function Home() {
 
     if (!firestore) return;
 
+    // Use Geolocation API to get current position
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          saveIncident(type, latitude, longitude);
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          toast({
+            title: "Location Access Required",
+            description: "We couldn't get your location. Triggering with placeholder data.",
+            variant: "destructive",
+          });
+          saveIncident(type, 0, 0);
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    } else {
+      saveIncident(type, 0, 0);
+    }
+  };
+
+  const saveIncident = (type: 'loud' | 'silent', lat: number, lng: number) => {
+    if (!user || !firestore) return;
+
     const incidentData = {
       userProfileId: user.uid,
       incidentType: type === 'loud' ? 'LoudAlarm' : 'SilentAlarm',
       status: 'active',
       triggerTime: new Date().toISOString(),
-      currentLocationLatitude: 0,
-      currentLocationLongitude: 0,
+      currentLocationLatitude: lat,
+      currentLocationLongitude: lng,
       currentLocationTimestamp: new Date().toISOString(),
       createdAt: serverTimestamp(),
     };
@@ -98,7 +125,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen pb-24 md:pl-20 md:pb-0 font-body bg-background">
+    <div className="min-h-screen pb-24 md:pl-24 md:pb-0 font-body bg-background">
       <div className="p-6 max-w-2xl mx-auto space-y-12 flex flex-col items-center">
         <header className="w-full flex justify-between items-center pt-8">
           <div className="text-left">
