@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { Shield, Activity, PhoneCall, LayoutDashboard, Settings } from 'lucide-react';
 import { usePathname } from 'next/navigation';
