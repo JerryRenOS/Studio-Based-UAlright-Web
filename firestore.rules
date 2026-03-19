@@ -22,8 +22,6 @@ service cloud.firestore {
      *    userProfileId) match the owner's UID to prevent data from being cross-linked.
      * 4. Structural Segregation: System-level audit logs are separated from user-specific logs 
      *    to ensure that administrative data is never exposed to standard users.
-     * 5. Prototyping Flexibility: While authorization is strictly enforced based on UIDs, 
-     *    data schema validation is omitted to allow for rapid iterative development.
      */
 
     // --- Global Helper Functions ---
@@ -51,11 +49,19 @@ service cloud.firestore {
     // --- Collection Rules ---
 
     /**
-     * @description Rules for the primary UserProfile document. Controls account registration and profile management.
-     * @path /users/{userId}
-     * @allow User 'abc' to (create) document /users/abc.
-     * @deny User 'abc' to (update) document /users/xyz.
-     * @principle Ownership (Self-Creation).
+     * @description Waitlist rules allow public signup but restricted status checking.
+     */
+    match /waitlist/{email} {
+      // allow read (get + list) if the user is signed in and checking their own email
+      allow read: if isSignedIn() && request.auth.token.email == email;
+      // allow anyone to join the waitlist, but they can't approve themselves
+      allow create: if request.resource.data.approved == false;
+      // allow merging setDoc if the approval status doesn't change
+      allow update: if request.resource.data.approved == resource.data.approved;
+    }
+
+    /**
+     * @description Rules for the primary UserProfile document.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
@@ -66,10 +72,6 @@ service cloud.firestore {
 
       /**
        * @description Rules for a user's Trusted Contacts.
-       * @path /users/{userId}/trustedContacts/{contactId}
-       * @allow User 'abc' to (list) their own contacts.
-       * @deny User 'abc' to (get) a contact under /users/xyz.
-       * @principle Path-based Ownership.
        */
       match /trustedContacts/{contactId} {
         allow get: if isOwner(userId);
@@ -80,11 +82,7 @@ service cloud.firestore {
       }
 
       /**
-       * @description Rules for the SafetyProfile singleton, containing emergency preferences and duress codes.
-       * @path /users/{userId}/safetyProfile/safetyProfile
-       * @allow User 'abc' to (update) their own safety settings.
-       * @deny Unauthenticated user to (get) any safety profile.
-       * @principle Path-based Ownership.
+       * @description Rules for the SafetyProfile singleton.
        */
       match /safetyProfile/{profileId} {
         allow get: if isOwner(userId);
@@ -95,11 +93,7 @@ service cloud.firestore {
       }
 
       /**
-       * @description Rules for StagedCallAssets (audio/video metadata).
-       * @path /users/{userId}/stagedCallAssets/{assetId}
-       * @allow User 'abc' to (create) metadata for a pre-recorded call.
-       * @deny User 'abc' to (delete) an asset belonging to user 'xyz'.
-       * @principle Path-based Ownership.
+       * @description Rules for StagedCallAssets.
        */
       match /stagedCallAssets/{assetId} {
         allow get: if isOwner(userId);
@@ -110,11 +104,7 @@ service cloud.firestore {
       }
 
       /**
-       * @description Rules for StagedCallScenarios (pre-configured fake call logic).
-       * @path /users/{userId}/stagedCallScenarios/{scenarioId}
-       * @allow User 'abc' to (get) their 'Fake Boss Call' scenario.
-       * @deny User 'abc' to (update) scenario IDs in user 'xyz''s folder.
-       * @principle Path-based Ownership.
+       * @description Rules for StagedCallScenarios.
        */
       match /stagedCallScenarios/{scenarioId} {
         allow get: if isOwner(userId);
@@ -126,10 +116,6 @@ service cloud.firestore {
 
       /**
        * @description Rules for safety Incidents.
-       * @path /users/{userId}/incidents/{incidentId}
-       * @allow User 'abc' to (create) a 'LoudAlarm' incident.
-       * @deny User 'abc' to (list) incidents for user 'xyz'.
-       * @principle Path-based Ownership.
        */
       match /incidents/{incidentId} {
         allow get: if isOwner(userId);
@@ -139,11 +125,7 @@ service cloud.firestore {
         allow delete: if isExistingOwner(userId);
 
         /**
-         * @description Rules for IncidentActions (log of events during an incident).
-         * @path /users/{userId}/incidents/{incidentId}/incidentActions/{actionId}
-         * @allow User 'abc' to (create) a location update action during their incident.
-         * @deny User 'abc' to (get) actions for an incident owned by user 'xyz'.
-         * @principle Authorization Independence (uses denormalized userProfileId).
+         * @description Rules for IncidentActions.
          */
         match /incidentActions/{actionId} {
           allow get: if isOwner(userId);
@@ -155,11 +137,7 @@ service cloud.firestore {
       }
 
       /**
-       * @description Rules for DeviceTokens (FCM tokens for push notifications).
-       * @path /users/{userId}/deviceTokens/{tokenId}
-       * @allow User 'abc' to (create) a token for their current device.
-       * @deny User 'abc' to (update) tokens in user 'xyz''s collection.
-       * @principle Path-based Ownership.
+       * @description Rules for DeviceTokens.
        */
       match /deviceTokens/{tokenId} {
         allow get: if isOwner(userId);
@@ -171,26 +149,18 @@ service cloud.firestore {
 
       /**
        * @description Rules for user-specific AuditLogs.
-       * @path /users/{userId}/auditLogs/{logId}
-       * @allow User 'abc' to (get) a log of their last login.
-       * @deny User 'abc' to (list) audit logs for user 'xyz'.
-       * @principle Structural Segregation.
        */
       match /auditLogs/{logId} {
         allow get: if isOwner(userId);
         allow list: if isOwner(userId);
         allow create: if isOwner(userId) && matchesPath(request.resource.data.userProfileId, userId);
-        allow update: if false; // Audit logs should generally be immutable.
-        allow delete: if false; // Audit logs should generally be preserved.
+        allow update: if false; 
+        allow delete: if false; 
       }
     }
 
     /**
      * @description Rules for System-wide Audit Logs.
-     * @path /systemAuditLogs/{logId}
-     * @allow No client-side requests (Backend only).
-     * @deny Any user (read/write) access to system logs.
-     * @principle Strict Segregation & Restricted Access.
      */
     match /systemAuditLogs/{logId} {
       allow get, list: if false;
