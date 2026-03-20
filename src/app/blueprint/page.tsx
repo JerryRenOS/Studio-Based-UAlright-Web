@@ -1,11 +1,12 @@
 import { Navigation } from '@/components/Navigation';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Shield, Database, Cloud, Lock, ListTodo, GitGraph } from 'lucide-react';
+import { Shield, Database, Cloud, Lock } from 'lucide-react';
 
 export default function BlueprintPage() {
   return (
-    <div className="min-h-screen pb-24 md:pl-20 md:pb-0 bg-background font-body">
+    <div className="min-h-screen pb-24 md:pl-20 md:pb-12 bg-background font-body pt-12">
+      <Navigation />
       <div className="p-6 max-w-4xl mx-auto space-y-8">
         <header className="space-y-2">
           <h1 className="text-3xl font-headline font-bold text-primary tracking-tight">System Architecture</h1>
@@ -13,7 +14,7 @@ export default function BlueprintPage() {
         </header>
 
         <Tabs defaultValue="products" className="w-full">
-          <TabsList className="w-full bg-muted/50 grid grid-cols-2 md:grid-cols-5 h-auto">
+          <TabsList className="w-full bg-muted/50 grid grid-cols-2 md:grid-cols-5 h-auto rounded-2xl p-1">
             <TabsTrigger value="products">Products</TabsTrigger>
             <TabsTrigger value="data">Data Model</TabsTrigger>
             <TabsTrigger value="functions">Functions</TabsTrigger>
@@ -47,9 +48,9 @@ export default function BlueprintPage() {
           </TabsContent>
 
           <TabsContent value="data" className="mt-6">
-            <Card>
+            <Card className="rounded-[2rem] border-none shadow-xl overflow-hidden">
               <CardContent className="pt-6">
-                <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto text-primary font-mono">
+                <pre className="text-xs bg-muted p-4 rounded-xl overflow-x-auto text-primary font-mono">
 {`{
   "users": {
     "uid": { "name": "...", "phone": "...", "safetySettings": { "smsTemplate": "..." } }
@@ -87,7 +88,7 @@ export default function BlueprintPage() {
           </TabsContent>
 
           <TabsContent value="security" className="mt-6">
-            <Card>
+            <Card className="rounded-[2rem] border-none shadow-xl overflow-hidden">
               <CardContent className="pt-6 space-y-4">
                 <div className="flex gap-4">
                   <Lock className="text-destructive shrink-0" />
@@ -96,7 +97,7 @@ export default function BlueprintPage() {
                     <p className="text-sm text-muted-foreground">Location data is ONLY readable by the user and specific Cloud Functions during an active incident. No cross-user access.</p>
                   </div>
                 </div>
-                <div className="bg-muted p-4 rounded text-xs font-mono">
+                <div className="bg-muted p-4 rounded-xl text-xs font-mono">
                   {`allow read, write: if request.auth.uid == userId;`}
                 </div>
               </CardContent>
@@ -105,15 +106,15 @@ export default function BlueprintPage() {
 
           <TabsContent value="plan" className="mt-6">
             <div className="space-y-4">
-              <div className="flex gap-4 items-start">
+              <div className="flex gap-4 items-start bg-white p-4 rounded-2xl shadow-sm">
                 <div className="bg-primary text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shrink-0">1</div>
                 <div><h4 className="font-bold">Core Infrastructure</h4><p className="text-sm text-muted-foreground">Auth setup & Firestore schema definition.</p></div>
               </div>
-              <div className="flex gap-4 items-start">
+              <div className="flex gap-4 items-start bg-white p-4 rounded-2xl shadow-sm">
                 <div className="bg-primary text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shrink-0">2</div>
                 <div><h4 className="font-bold">Triggers</h4><p className="text-sm text-muted-foreground">Implement Loud & Silent alarm Logic in Cloud Functions.</p></div>
               </div>
-              <div className="flex gap-4 items-start">
+              <div className="flex gap-4 items-start bg-white p-4 rounded-2xl shadow-sm">
                 <div className="bg-primary text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shrink-0">3</div>
                 <div><h4 className="font-bold">Twilio Integration</h4><p className="text-sm text-muted-foreground">SMS bridge with secret management.</p></div>
               </div>
@@ -121,14 +122,13 @@ export default function BlueprintPage() {
           </TabsContent>
         </Tabs>
       </div>
-      <Navigation />
     </div>
   );
 }
 
 function ProductCard({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) {
   return (
-    <Card className="hover:shadow-lg transition-shadow">
+    <Card className="hover:shadow-lg transition-shadow border-none rounded-[2rem]">
       <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
           {icon}
@@ -144,7 +144,7 @@ function ProductCard({ icon, title, desc }: { icon: React.ReactNode, title: stri
 
 function FunctionItem({ title, trigger, logic }: { title: string, trigger: string, logic: string }) {
   return (
-    <div className="border-l-4 border-primary pl-4 py-2 bg-white shadow-sm rounded-r-md">
+    <div className="border-l-4 border-primary pl-4 py-4 bg-white shadow-sm rounded-r-[2rem] rounded-l-md">
       <div className="flex justify-between items-center mb-1">
         <h4 className="font-bold text-primary">{title}</h4>
         <span className="text-[10px] bg-muted px-2 py-0.5 rounded font-mono font-bold uppercase">{trigger}</span>

@@ -4,9 +4,8 @@ import { useState } from 'react';
 import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { PhoneCall, Sparkles, Plus, Play, Clock, ChevronRight } from 'lucide-react';
+import { Sparkles, Plus, Play, Clock, ChevronRight } from 'lucide-react';
 import { aiStagedCallScriptSuggestion } from '@/ai/flows/ai-staged-call-script-suggestion';
 import { useToast } from '@/hooks/use-toast';
 
@@ -33,7 +32,8 @@ export default function StagedCallPage() {
   };
 
   return (
-    <div className="min-h-screen pb-24 md:pl-20 md:pb-0 bg-background font-body">
+    <div className="min-h-screen pb-24 md:pl-20 md:pb-12 bg-background font-body pt-12">
+      <Navigation />
       <div className="p-6 max-w-2xl mx-auto space-y-8">
         <header className="space-y-2">
           <h1 className="text-3xl font-headline font-bold text-primary tracking-tight">Cover Story</h1>
@@ -42,22 +42,22 @@ export default function StagedCallPage() {
 
         <section className="space-y-4">
           <h2 className="text-xl font-bold flex items-center gap-2">
-            <Sparkles className="text-accent" size={20} />
+            <Sparkles className="text-primary" size={20} />
             AI Script Co-pilot
           </h2>
-          <Card className="border-accent/30 shadow-md">
+          <Card className="border-none shadow-xl rounded-[2rem] bg-white/50 backdrop-blur-sm overflow-hidden">
             <CardContent className="pt-6 space-y-4">
               <p className="text-sm text-muted-foreground">Describe your situation to generate realistic script cues.</p>
               <Textarea 
                 placeholder="e.g., A colleague calling to say there's an urgent server issue..." 
-                className="bg-muted/30"
+                className="bg-muted/20 border-none rounded-2xl min-h-[120px] focus-visible:ring-primary"
                 value={scenario}
                 onChange={(e) => setScenario(e.target.value)}
               />
               <Button 
                 onClick={handleGenerate} 
                 disabled={isGenerating}
-                className="w-full bg-accent hover:bg-accent/80 text-accent-foreground font-bold"
+                className="w-full py-7 rounded-2xl font-bold text-lg shadow-xl shadow-primary/10"
               >
                 {isGenerating ? "Crafting script..." : "Generate Timed Cues"}
               </Button>
@@ -65,53 +65,52 @@ export default function StagedCallPage() {
           </Card>
 
           {suggestions.length > 0 && (
-            <Card className="border-accent/20 bg-accent/5">
+            <Card className="border-none shadow-xl rounded-[2rem] bg-primary/5">
               <CardHeader>
-                <CardTitle className="text-sm uppercase tracking-wider opacity-60">Suggested Timing</CardTitle>
+                <CardTitle className="text-xs uppercase tracking-widest font-bold opacity-60">Suggested Timing</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 {suggestions.map((cue, idx) => (
-                  <div key={idx} className="flex items-start gap-4 p-3 bg-white rounded-lg border border-accent/10">
-                    <div className="flex items-center gap-1 text-accent font-mono text-sm pt-1">
+                  <div key={idx} className="flex items-start gap-4 p-4 bg-white rounded-2xl shadow-sm">
+                    <div className="flex items-center gap-1 text-primary font-mono text-sm pt-1">
                       <Clock size={14} />
                       {cue.timeOffsetSeconds}s
                     </div>
-                    <p className="text-sm font-medium">{cue.cueText}</p>
+                    <p className="text-sm font-bold text-foreground/80">{cue.cueText}</p>
                   </div>
                 ))}
               </CardContent>
               <CardFooter>
-                <Button variant="outline" size="sm" className="w-full">Save to My Scenarios</Button>
+                <Button variant="outline" size="sm" className="w-full rounded-full py-5 border-primary/20 text-primary font-bold">Save to My Scenarios</Button>
               </CardFooter>
             </Card>
           )}
         </section>
 
         <section className="space-y-4">
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center px-1">
             <h2 className="text-xl font-bold">Your Scenarios</h2>
-            <Button variant="ghost" size="sm" className="text-primary flex gap-1 items-center">
-              <Plus size={16} /> New
+            <Button variant="ghost" size="sm" className="text-primary font-bold flex gap-1 items-center rounded-full px-3">
+              <Plus size={20} />
             </Button>
           </div>
           
           <div className="grid gap-4">
-            <Card className="hover:border-primary transition-all cursor-pointer group">
-              <CardContent className="p-4 flex items-center gap-4">
-                <div className="bg-primary/10 p-3 rounded-full text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                  <Play size={20} />
+            <Card className="hover:scale-[1.01] transition-all cursor-pointer group border-none shadow-lg rounded-[2rem]">
+              <CardContent className="p-6 flex items-center gap-4">
+                <div className="bg-primary/10 p-4 rounded-2xl text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                  <Play size={24} />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold">Work Emergency</h3>
-                  <p className="text-xs text-muted-foreground">3 script cues • 0:45 duration</p>
+                  <h3 className="font-bold text-lg">Work Emergency</h3>
+                  <p className="text-xs text-muted-foreground font-medium">3 script cues • 0:45 duration</p>
                 </div>
-                <ChevronRight className="text-muted-foreground" size={20} />
+                <ChevronRight className="text-muted-foreground/30" size={24} />
               </CardContent>
             </Card>
           </div>
         </section>
       </div>
-      <Navigation />
     </div>
   );
 }

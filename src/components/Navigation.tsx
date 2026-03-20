@@ -9,61 +9,48 @@ export function Navigation() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-xl border-b border-black/5 z-50 flex items-center justify-center px-6">
-      <div className="flex items-center gap-1 md:gap-4 bg-muted/40 p-1.5 rounded-full ring-1 ring-black/5">
-        <NavItem 
-          href="/app" 
-          icon={<Shield size={20} />} 
-          label="Safety" 
-          active={pathname === '/app'} 
-        />
-        <NavItem 
-          href="/dashboard" 
-          icon={<Activity size={20} />} 
-          label="Activity" 
-          active={pathname === '/dashboard'} 
-        />
-        <NavItem 
-          href="/staged-call" 
-          icon={<PhoneCall size={20} />} 
-          label="Cover" 
-          active={pathname === '/staged-call'} 
-        />
-        <NavItem 
-          href="/blueprint" 
-          icon={<LayoutDashboard size={20} />} 
-          label="Plan" 
-          active={pathname === '/blueprint'} 
-        />
-        <NavItem 
-          href="/settings" 
-          icon={<Settings size={20} />} 
-          label="Settings" 
-          active={pathname === '/settings'} 
-        />
-      </div>
-    </nav>
+    <>
+      {/* Mobile Bottom Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 h-16 bg-white/80 backdrop-blur-xl border-t border-black/5 z-50 flex items-center justify-around px-6 md:hidden">
+        <NavItem href="/app" icon={<Shield size={24} />} active={pathname === '/app'} />
+        <NavItem href="/dashboard" icon={<Activity size={24} />} active={pathname === '/dashboard'} />
+        <NavItem href="/staged-call" icon={<PhoneCall size={24} />} active={pathname === '/staged-call'} />
+        <NavItem href="/blueprint" icon={<LayoutDashboard size={24} />} active={pathname === '/blueprint'} />
+        <NavItem href="/settings" icon={<Settings size={24} />} active={pathname === '/settings'} />
+      </nav>
+
+      {/* Desktop Vertical Sidebar */}
+      <nav className="fixed inset-y-0 left-0 w-20 bg-white border-r border-black/5 z-50 hidden md:flex flex-col items-center py-8 gap-6">
+        <div className="mb-6 p-2 bg-primary/10 rounded-2xl">
+           <Shield className="text-primary" size={28} />
+        </div>
+        <NavItem href="/app" icon={<Shield size={24} />} active={pathname === '/app'} tooltip="Safety" />
+        <NavItem href="/dashboard" icon={<Activity size={24} />} active={pathname === '/dashboard'} tooltip="Activity" />
+        <NavItem href="/staged-call" icon={<PhoneCall size={24} />} active={pathname === '/staged-call'} tooltip="Cover" />
+        <NavItem href="/blueprint" icon={<LayoutDashboard size={24} />} active={pathname === '/blueprint'} tooltip="Plan" />
+        <NavItem href="/settings" icon={<Settings size={24} />} active={pathname === '/settings'} tooltip="Settings" />
+      </nav>
+    </>
   );
 }
 
-function NavItem({ href, icon, label, active }: { href: string; icon: React.ReactNode; label: string; active?: boolean }) {
+function NavItem({ href, icon, active, tooltip }: { href: string; icon: React.ReactNode; active?: boolean; tooltip?: string }) {
   return (
     <Link 
       href={href} 
       className={cn(
-        "flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300",
+        "flex items-center justify-center p-3 rounded-2xl transition-all duration-300 group relative",
         active 
-          ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105" 
+          ? "bg-primary text-white shadow-lg shadow-primary/20 scale-110" 
           : "text-muted-foreground hover:text-foreground hover:bg-black/5"
       )}
     >
       {icon}
-      <span className={cn(
-        "text-xs font-bold uppercase tracking-widest hidden sm:block",
-        !active && "opacity-60"
-      )}>
-        {label}
-      </span>
+      {tooltip && (
+        <span className="absolute left-full ml-4 px-3 py-1.5 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-xl whitespace-nowrap pointer-events-none z-[60]">
+          {tooltip}
+        </span>
+      )}
     </Link>
   );
 }

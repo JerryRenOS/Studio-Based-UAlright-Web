@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -64,12 +63,12 @@ export default function DashboardPage() {
       description: "Safety status updated. Contacts have been notified that you are safe.",
     });
     
-    // Smooth transition for the UI
     setTimeout(() => setIsResolving(false), 500);
   };
 
   return (
-    <div className="min-h-screen pb-24 md:pl-24 md:pb-0 bg-background font-body">
+    <div className="min-h-screen pb-24 md:pl-20 md:pb-12 bg-background font-body pt-12">
+      <Navigation />
       <div className="p-6 max-w-2xl mx-auto space-y-8">
         <header className="flex justify-between items-end">
           <div className="space-y-1">
@@ -82,9 +81,9 @@ export default function DashboardPage() {
         </header>
 
         {!user && !isUserLoading ? (
-          <Card className="border-dashed">
-            <CardContent className="p-8 flex flex-col items-center justify-center text-center space-y-3">
-              <AlertCircle className="text-muted-foreground" size={48} />
+          <Card className="border-dashed border-2 rounded-[2rem] bg-muted/20">
+            <CardContent className="p-12 flex flex-col items-center justify-center text-center space-y-3">
+              <AlertCircle className="text-muted-foreground/30" size={48} />
               <div className="space-y-1">
                 <p className="font-bold">Account Required</p>
                 <p className="text-sm text-muted-foreground">Sign in to view your personalized safety logs.</p>
@@ -105,7 +104,7 @@ export default function DashboardPage() {
                 </div>
               ) : activeIncident ? (
                 <Card className={cn(
-                  "overflow-hidden relative shadow-lg ring-2 transition-all",
+                  "overflow-hidden relative shadow-2xl ring-2 transition-all rounded-[2rem]",
                   activeIncident.incidentType === 'LoudAlarm' 
                     ? "border-destructive ring-destructive/20 bg-destructive/5" 
                     : "border-primary ring-primary/20 bg-primary/5"
@@ -122,7 +121,7 @@ export default function DashboardPage() {
                       )}></span>
                     </span>
                   </div>
-                  <CardHeader className="py-4 border-b border-black/5">
+                  <CardHeader className="py-6 border-b border-black/5">
                     <CardTitle className={cn(
                       "flex items-center gap-2 text-xl font-bold",
                       activeIncident.incidentType === 'LoudAlarm' ? "text-destructive" : "text-primary"
@@ -131,18 +130,18 @@ export default function DashboardPage() {
                       {activeIncident.incidentType === 'LoudAlarm' ? 'Loud Alarm Active' : 'Silent Alarm Active'}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="p-5 space-y-5">
+                  <CardContent className="p-6 space-y-6">
                     <div className="flex justify-between text-sm items-center">
                       <span className="text-muted-foreground font-medium">
                         Started: {format(new Date(activeIncident.triggerTime), 'p')}
                       </span>
-                      <Badge variant={activeIncident.incidentType === 'LoudAlarm' ? "destructive" : "default"} className="animate-pulse">
+                      <Badge variant={activeIncident.incidentType === 'LoudAlarm' ? "destructive" : "default"} className="animate-pulse px-3 py-1 font-bold">
                         Live Incident
                       </Badge>
                     </div>
                     
                     <div className="space-y-4">
-                      <div className="flex gap-4 items-start">
+                      <div className="flex gap-4 items-start bg-white/50 p-4 rounded-2xl">
                         <div className="bg-primary/10 p-2.5 rounded-full">
                           <MessageCircle size={18} className="text-primary" />
                         </div>
@@ -155,7 +154,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       
-                      <div className="flex gap-4 items-start">
+                      <div className="flex gap-4 items-start bg-white/50 p-4 rounded-2xl">
                         <div className="bg-primary/10 p-2.5 rounded-full">
                           <MapPin size={18} className="text-primary" />
                         </div>
@@ -166,28 +165,28 @@ export default function DashboardPage() {
                       </div>
                     </div>
 
-                    <div className="pt-4 border-t border-black/5">
+                    <div className="pt-4">
                       <Button 
-                        className="w-full py-6 rounded-xl font-bold text-lg gap-2 shadow-md hover:scale-[1.01] transition-all" 
+                        className="w-full py-7 rounded-2xl font-bold text-lg gap-2 shadow-xl hover:scale-[1.01] transition-all" 
                         variant={activeIncident.incidentType === 'LoudAlarm' ? "destructive" : "default"}
                         onClick={() => handleResolve(activeIncident.id)}
                         disabled={isResolving}
                       >
-                        {isResolving ? <Loader2 className="animate-spin" size={20} /> : <ShieldCheck size={20} />}
+                        {isResolving ? <Loader2 className="animate-spin" size={20} /> : <ShieldCheck size={24} />}
                         I'm Safe - Resolve Alarm
                       </Button>
-                      <p className="text-[10px] text-center text-muted-foreground mt-2 uppercase tracking-widest font-bold opacity-60">
+                      <p className="text-[10px] text-center text-muted-foreground mt-4 uppercase tracking-widest font-bold opacity-60">
                         This will notify trusted contacts that you are secure
                       </p>
                     </div>
                   </CardContent>
                 </Card>
               ) : (
-                <Card className="bg-muted/30 border-none rounded-2xl">
-                  <CardContent className="p-8 text-center flex flex-col items-center gap-2">
-                    <CheckCircle2 className="text-green-500 mb-1" size={24} />
-                    <p className="text-sm font-medium">Monitoring Standby</p>
-                    <p className="text-xs text-muted-foreground">No active incidents detected.</p>
+                <Card className="bg-muted/30 border-none rounded-[2rem]">
+                  <CardContent className="p-12 text-center flex flex-col items-center gap-2">
+                    <CheckCircle2 className="text-green-500 mb-1" size={32} />
+                    <p className="text-base font-bold">Monitoring Standby</p>
+                    <p className="text-sm text-muted-foreground">No active incidents detected.</p>
                   </CardContent>
                 </Card>
               )}
@@ -204,7 +203,7 @@ export default function DashboardPage() {
                     variant="ghost" 
                     size="sm" 
                     onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
-                    className="text-xs font-bold text-primary hover:bg-primary/5"
+                    className="text-xs font-bold text-primary hover:bg-primary/5 rounded-full"
                   >
                     {isHistoryExpanded ? (
                       <span className="flex items-center gap-1">Collapse <ChevronUp size={14} /></span>
@@ -217,10 +216,10 @@ export default function DashboardPage() {
 
               <div className={cn(
                 "transition-all duration-300 ease-in-out",
-                isHistoryExpanded ? "max-h-[600px]" : "max-h-[300px]"
+                isHistoryExpanded ? "max-h-[600px]" : "max-h-[350px]"
               )}>
                 <ScrollArea className={cn(
-                  "w-full rounded-2xl border bg-white/50 backdrop-blur-sm shadow-sm",
+                  "w-full rounded-[2rem] border bg-white/50 backdrop-blur-sm shadow-xl",
                   isHistoryExpanded ? "h-[500px]" : "h-auto"
                 )}>
                   <div className="p-4 space-y-3">
@@ -235,8 +234,8 @@ export default function DashboardPage() {
                         />
                       ))
                     ) : !isIncidentsLoading && (
-                      <div className="text-center py-12 space-y-2">
-                        <History size={32} className="mx-auto text-muted-foreground/30" />
+                      <div className="text-center py-16 space-y-2">
+                        <History size={48} className="mx-auto text-muted-foreground/20" />
                         <p className="text-sm text-muted-foreground font-medium">No recorded incidents yet.</p>
                       </div>
                     )}
@@ -247,7 +246,6 @@ export default function DashboardPage() {
           </>
         )}
       </div>
-      <Navigation />
     </div>
   );
 }
@@ -259,17 +257,17 @@ function HistoryItem({ type, date, status, isActive }: { type: string, date: str
   
   return (
     <Card className={cn(
-      "hover:bg-muted/10 transition-all border-none shadow-none",
+      "hover:bg-muted/10 transition-all border-none shadow-none rounded-2xl",
       isLoud ? "bg-destructive/5" : "bg-primary/5",
       isActive && (isLoud ? "ring-2 ring-destructive/20" : "ring-2 ring-primary/20")
     )}>
-      <CardContent className="p-4 flex justify-between items-center">
+      <CardContent className="p-5 flex justify-between items-center">
         <div className="flex gap-4 items-center">
           <div className={cn(
-            "p-2 rounded-full",
+            "p-3 rounded-2xl",
             isLoud ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary"
           )}>
-            {isLoud ? <Volume2 size={16} /> : <EyeOff size={16} />}
+            {isLoud ? <Volume2 size={20} /> : <EyeOff size={20} />}
           </div>
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -277,7 +275,7 @@ function HistoryItem({ type, date, status, isActive }: { type: string, date: str
               <Badge 
                 variant={isActive ? (isLoud ? "destructive" : "default") : (status === 'resolved' ? 'outline' : 'secondary')} 
                 className={cn(
-                  "text-[9px] h-4 px-1.5 font-bold uppercase tracking-wider",
+                  "text-[9px] h-4 px-2 font-bold uppercase tracking-wider",
                   status === 'resolved' && "text-green-600 border-green-200 bg-green-50"
                 )}
               >
@@ -292,11 +290,11 @@ function HistoryItem({ type, date, status, isActive }: { type: string, date: str
         </div>
         <div className="opacity-20">
           {isActive ? (
-            <AlertCircle size={18} className={isLoud ? "text-destructive" : "text-primary"} />
+            <AlertCircle size={20} className={isLoud ? "text-destructive" : "text-primary"} />
           ) : status === 'resolved' ? (
-            <CheckCircle2 size={18} className="text-green-600" />
+            <CheckCircle2 size={20} className="text-green-600" />
           ) : (
-            <CheckCircle2 size={18} className="text-muted-foreground" />
+            <CheckCircle2 size={20} className="text-muted-foreground" />
           )}
         </div>
       </CardContent>

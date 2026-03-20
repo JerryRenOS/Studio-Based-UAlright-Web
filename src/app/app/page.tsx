@@ -5,11 +5,12 @@ import { Navigation } from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Volume2, EyeOff, ShieldCheck, Loader2 } from 'lucide-react';
-import { useFirestore, useUser, setDocumentNonBlocking, addDocumentNonBlocking, useMemoFirebase, useCollection } from '@/firebase';
+import { useFirestore, useUser, setDocumentNonBlocking, useMemoFirebase, useCollection } from '@/firebase';
 import { collection, serverTimestamp, doc, getDocs, getDoc, query, where } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { silentAlarmDispatch } from '@/ai/flows/silent-alarm-dispatch-flow';
 import { useRouter } from 'next/navigation';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export default function AppPage() {
   const firestore = useFirestore();
@@ -19,7 +20,6 @@ export default function AppPage() {
   const [isCheckingAccess, setIsCheckingAccess] = useState(true);
   const [isApproved, setIsApproved] = useState(false);
 
-  // Memoized query to check waitlist status
   const waitlistQuery = useMemoFirebase(() => {
     if (!firestore || !user?.email) return null;
     return query(collection(firestore, 'waitlist'), where('email', '==', user.email));
@@ -143,7 +143,7 @@ export default function AppPage() {
 
   if (!isApproved) {
     return (
-      <div className="min-h-screen pt-24 bg-background px-6 flex flex-col items-center justify-center text-center space-y-4">
+      <div className="min-h-screen bg-background px-6 flex flex-col items-center justify-center text-center space-y-4">
         <Navigation />
         <div className="bg-white p-8 rounded-[2rem] shadow-xl max-w-sm">
           <ShieldCheck className="mx-auto text-primary mb-4" size={48} />
@@ -156,7 +156,7 @@ export default function AppPage() {
   }
 
   return (
-    <div className="min-h-screen pt-24 pb-12 bg-background font-body px-6">
+    <div className="min-h-screen pb-24 md:pl-20 md:pb-12 bg-background font-body px-6 pt-12">
       <Navigation />
       <div className="max-w-md mx-auto space-y-12 flex flex-col items-center">
         <header className="w-full text-center space-y-2">
@@ -165,7 +165,6 @@ export default function AppPage() {
         </header>
 
         <div className="grid grid-cols-1 gap-12 w-full justify-items-center">
-          {/* Loud Alarm Button */}
           <div className="flex flex-col items-center gap-4">
             <button
               onClick={() => triggerAlarm('loud')}
@@ -181,7 +180,6 @@ export default function AppPage() {
             </div>
           </div>
 
-          {/* Silent Alarm Button */}
           <div className="flex flex-col items-center gap-4">
             <button
               onClick={() => triggerAlarm('silent')}
