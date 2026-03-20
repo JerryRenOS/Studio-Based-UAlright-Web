@@ -22,7 +22,7 @@ export function Navigation() {
   return (
     <>
       {/* Mobile Bottom Bar */}
-      <nav className="fixed bottom-0 left-0 right-0 h-20 bg-white/95 backdrop-blur-xl border-t border-black/5 z-50 flex items-center justify-around px-2 md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 h-20 bg-background/80 backdrop-blur-2xl border-t border-primary/10 z-50 flex items-center justify-around px-2 md:hidden shadow-[0_-8px_30px_rgba(0,0,0,0.04)]">
         {navItems.map((item) => (
           <MobileNavItem 
             key={item.href}
@@ -35,7 +35,7 @@ export function Navigation() {
       </nav>
 
       {/* Desktop Vertical Sidebar */}
-      <nav className="fixed inset-y-0 left-0 w-24 bg-white border-r border-black/5 z-50 hidden md:flex flex-col items-center py-10">
+      <nav className="fixed inset-y-0 left-0 w-24 bg-background border-r border-primary/10 z-50 hidden md:flex flex-col items-center py-10 shadow-[4px_0_30px_rgba(0,0,0,0.02)]">
         <div className="flex-1 w-full flex flex-col items-center gap-10">
           {navItems.map((item) => (
             <DesktopNavItem 
@@ -54,16 +54,16 @@ export function Navigation() {
           className="mt-auto group"
         >
           <div className={cn(
-            "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 bg-slate-100 group-hover:bg-primary/10",
+            "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 bg-white shadow-sm ring-1 ring-black/5 group-hover:bg-primary/5",
             pathname === '/settings' && "ring-2 ring-primary ring-offset-4"
           )}>
             {user?.photoURL ? (
               <Avatar className="w-full h-full">
                 <AvatarImage src={user.photoURL} />
-                <AvatarFallback><UserIcon className="text-slate-400" size={20} /></AvatarFallback>
+                <AvatarFallback><UserIcon className="text-foreground/40" size={20} /></AvatarFallback>
               </Avatar>
             ) : (
-              <UserIcon className="text-slate-400 group-hover:text-primary transition-colors" size={24} strokeWidth={1.5} />
+              <UserIcon className="text-foreground/40 group-hover:text-primary transition-colors" size={24} strokeWidth={1.5} />
             )}
           </div>
         </Link>
@@ -78,7 +78,7 @@ function DesktopNavItem({ href, icon, active, label }: { href: string; icon: Rea
       href={href} 
       className={cn(
         "flex flex-col items-center gap-2 transition-all duration-300 group",
-        active ? "text-primary" : "text-slate-400 hover:text-slate-600"
+        active ? "text-primary" : "text-foreground/40 hover:text-foreground/60"
       )}
     >
       <div className={cn(
@@ -89,7 +89,7 @@ function DesktopNavItem({ href, icon, active, label }: { href: string; icon: Rea
       </div>
       <span className={cn(
         "text-[10px] font-bold uppercase tracking-[0.2em] transition-colors",
-        active ? "text-primary" : "text-slate-400 group-hover:text-slate-500"
+        active ? "text-primary" : "text-foreground/30 group-hover:text-foreground/50"
       )}>
         {label}
       </span>
@@ -103,13 +103,19 @@ function MobileNavItem({ href, icon, active, label }: { href: string; icon: Reac
       href={href} 
       className={cn(
         "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all",
-        active ? "text-primary" : "text-slate-400"
+        active ? "text-primary" : "text-foreground/40 hover:text-foreground/60"
       )}
     >
-      <div className={active ? "scale-110" : ""}>
+      <div className={cn(
+        "transition-transform",
+        active && "scale-110"
+      )}>
         {icon}
       </div>
-      <span className="text-[9px] font-bold uppercase tracking-wider">
+      <span className={cn(
+        "text-[9px] font-bold uppercase tracking-wider",
+        active ? "text-primary" : "text-foreground/40"
+      )}>
         {label}
       </span>
     </Link>
