@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A Genkit flow for securely dispatching safety alerts via Twilio.
@@ -56,8 +57,8 @@ const silentAlarmDispatchFlow = ai.defineFlow(
     const authToken = process.env.TWILIO_AUTH_TOKEN;
     const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
 
-    if (!accountSid || !authToken || !twilioNumber || accountSid.includes('XXXX')) {
-      throw new Error('Twilio credentials not configured in environment. Please update your .env file with your Twilio Account SID, Auth Token, and Phone Number.');
+    if (!accountSid || !authToken || !twilioNumber) {
+      throw new Error('Twilio credentials not configured in environment.');
     }
 
     const client = twilio(accountSid, authToken);
